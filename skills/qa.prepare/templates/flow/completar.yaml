@@ -1,0 +1,57 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Solicitante completa el mandado"
+method: PATCH
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/estado"
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  estado: "completado"
+expected:
+  status: 200
+  body_contains: ["id", "estado"]
+
+--- STEP
+type: shell
+id: "{{ID}}-01s"
+desc: "Esperar propagacion de BD tras completar mandado"
+command: "sleep 7"
+checkpoint: true
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Solicitante califica al mandadero"
+method: POST
+url: http://localhost:3000/api/v1/calificaciones
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  id_mandado: "{{MANDADO_ID_VAR}}"
+  id_calificado: "{{MANDADERO_ID_VAR}}"
+  puntuacion: 5
+  comentario: "Excelente servicio"
+expected:
+  status: 201
+  body_contains: ["id"]
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "Mandadero califica al solicitante"
+method: POST
+url: http://localhost:3000/api/v1/calificaciones
+headers:
+  Authorization: "Bearer {{MANDADERO_TOKEN}}"
+  Content-Type: application/json
+body:
+  id_mandado: "{{MANDADO_ID_VAR}}"
+  id_calificado: "{{SOLICITANTE_ID_VAR}}"
+  puntuacion: 5
+  comentario: "Muy buen trato"
+expected:
+  status: 201
+  body_contains: ["id"]

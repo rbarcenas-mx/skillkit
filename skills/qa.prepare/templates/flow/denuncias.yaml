@@ -1,0 +1,34 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Solicitante denuncia al mandadero por acoso"
+method: POST
+url: http://localhost:3000/api/v1/denuncias
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  id_usuario_denunciado: "{{MANDADERO_ID_VAR}}"
+  id_mandado: "{{MANDADO_ID_VAR}}"
+  motivo: "acoso"
+  descripcion: "Mensajes inapropiados post entrega"
+expected:
+  status: 201
+  body_contains: ["id", "estado"]
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Intentar auto-denuncia (400)"
+method: POST
+url: http://localhost:3000/api/v1/denuncias
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  id_usuario_denunciado: "{{SOLICITANTE_ID_VAR}}"
+  id_mandado: "{{MANDADO_ID_VAR}}"
+  motivo: "otro"
+  descripcion: "Auto denuncia de prueba"
+expected:
+  status: 400

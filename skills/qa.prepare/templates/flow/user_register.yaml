@@ -1,0 +1,40 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Registrar usuario {{NOMBRE}} (telefono {{TELEFONO}})"
+method: POST
+url: http://localhost:3000/api/v1/auth/register
+headers:
+  Content-Type: application/json
+body:
+  nombre_completo: "{{NOMBRE}}"
+  telefono: "{{TELEFONO}}"
+  correo_electronico: "{{EMAIL}}"
+expected:
+  status: 201
+  body_contains: ["mensaje"]
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Verificar OTP de {{NOMBRE}}"
+method: POST
+url: http://localhost:3000/api/v1/auth/verify-otp
+headers:
+  Content-Type: application/json
+body:
+  telefono: "{{TELEFONO}}"
+  codigo: "123456"
+expected:
+  status: 200
+  body_contains: ["token"]
+extract:
+  - var: "{{TOKEN_VAR}}"
+    path: "$.token"
+    required: true
+  - var: "{{REFRESH_VAR}}"
+    path: "$.refresh_token"
+    required: true
+  - var: "{{ID_VAR}}"
+    path: "$.usuario.id"
+    required: true

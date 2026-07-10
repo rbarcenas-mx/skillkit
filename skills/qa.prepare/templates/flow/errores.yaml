@@ -1,0 +1,45 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Error - OTP invalido (401)"
+method: POST
+url: http://localhost:3000/api/v1/auth/verify-otp
+headers:
+  Content-Type: application/json
+body:
+  telefono: "{{TELEFONO}}"
+  codigo: "000000"
+expected:
+  status: 401
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Error - mandado con datos invalidos (422)"
+method: POST
+url: http://localhost:3000/api/v1/mandados
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  titulo: ""
+  tipo: "invalido"
+expected:
+  status: 422
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "Error - auto-denuncia (400)"
+method: POST
+url: http://localhost:3000/api/v1/denuncias
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  id_usuario_denunciado: "{{SOLICITANTE_ID_VAR}}"
+  id_mandado: "{{MANDADO_ID_VAR}}"
+  motivo: "otro"
+  descripcion: "Auto denuncia"
+expected:
+  status: 400

@@ -1,0 +1,52 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "{{NOMBRE1}} envia mensaje en el canal"
+method: POST
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/mensajes"
+headers:
+  Authorization: "Bearer {{TOKEN1}}"
+  Content-Type: application/json
+body:
+  texto: "{{TEXTO1}}"
+expected:
+  status: 201
+  body_contains: ["id"]
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "{{NOMBRE2}} lee los mensajes"
+method: GET
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/mensajes"
+headers:
+  Authorization: "Bearer {{TOKEN2}}"
+expected:
+  status: 200
+  body_contains: ["mensajes"]
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "{{NOMBRE2}} responde al mensaje"
+method: POST
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/mensajes"
+headers:
+  Authorization: "Bearer {{TOKEN2}}"
+  Content-Type: application/json
+body:
+  texto: "{{TEXTO2}}"
+expected:
+  status: 201
+
+--- STEP
+type: http
+id: "{{ID}}-04"
+desc: "{{NOMBRE1}} lee ambos mensajes"
+method: GET
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/mensajes"
+headers:
+  Authorization: "Bearer {{TOKEN1}}"
+expected:
+  status: 200
+  body_contains: ["mensajes"]

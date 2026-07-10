@@ -1,0 +1,60 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Crear mandado ({{NOMBRE}})"
+method: POST
+url: http://localhost:3000/api/v1/mandados
+headers:
+  Authorization: "Bearer {{TOKEN}}"
+  Content-Type: application/json
+body:
+  titulo: "{{TITULO}}"
+  descripcion: "{{DESCRIPCION}}"
+  tipo: "compra"
+  ubicacion_recogida:
+    lat: 20.588
+    lng: -100.389
+    direccion: "Av. Principal 123, Col. Centro"
+  ubicacion_entrega:
+    lat: 20.590
+    lng: -100.392
+    direccion: "Calle Secundaria 456, Col. Norte"
+  fecha_hora_limite: "2026-12-31T18:00:00Z"
+expected:
+  status: 201
+  body_contains: ["id", "estado"]
+extract:
+  - var: "{{MANDADO_ID_EXTRACT}}"
+    path: "$.id"
+    required: true
+
+--- STEP
+type: shell
+id: "{{ID}}-01s"
+desc: "Esperar propagacion de BD tras crear mandado"
+command: "sleep 7"
+checkpoint: true
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Listar mandados cercanos"
+method: GET
+url: "http://localhost:3000/api/v1/mandados?lat=20.588&lng=-100.389&radio_km=10"
+headers:
+  Authorization: "Bearer {{TOKEN}}"
+expected:
+  status: 200
+  body_contains: ["data"]
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "Ver detalle del mandado"
+method: GET
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}"
+headers:
+  Authorization: "Bearer {{TOKEN}}"
+expected:
+  status: 200
+  body_contains: ["id", "estado"]

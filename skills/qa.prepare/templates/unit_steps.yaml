@@ -1,0 +1,34 @@
+--- STEP
+type: shell
+id: QA-001
+desc: Instalar dependencias del proyecto
+command: "npm install"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-002
+desc: Verificar que el codigo TypeScript compila sin errores
+command: "npx tsc --noEmit"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-003
+desc: Ejecutar ESLint sobre src/ y tests/
+command: "npx eslint src/ tests/ --ext .ts"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-004
+desc: Ejecutar tests unitarios (excluyendo integracion)
+command: "export $(grep -v '^#' .env.qa | xargs) && npx jest --passWithNoTests --testPathIgnorePatterns='tests/integration'"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-005
+desc: Formatear codigo con Prettier y verificar formato
+command: "npx prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'prisma/**/*.ts' && npx prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'prisma/**/*.ts'"
+checkpoint: true

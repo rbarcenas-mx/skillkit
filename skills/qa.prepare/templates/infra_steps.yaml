@@ -1,0 +1,69 @@
+--- STEP
+type: shell
+id: QA-000
+desc: Resetear entorno - matar servidor y destruir contenedores Docker existentes
+command: "fuser -k 3000/tcp 2>/dev/null; docker compose down --volumes 2>/dev/null; echo 'Entorno reseteado'"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-001
+desc: Verificar prerrequisitos (Node, npm, Docker)
+command: "node --version && npm --version && docker --version && docker compose version"
+checkpoint: true
+max_retries: 1
+
+--- STEP
+type: shell
+id: QA-002
+desc: Instalar dependencias de proyecto
+command: "npm install"
+checkpoint: true
+max_retries: 1
+
+--- STEP
+type: shell
+id: QA-003
+desc: Verificar archivos de configuracion (.env.qa y docker-compose.yml)
+command: "test -f .env.qa && test -f docker-compose.yml && echo 'Archivos OK' || (echo 'Falta configuracion' && exit 1)"
+checkpoint: true
+max_retries: 1
+
+--- STEP
+type: shell
+id: QA-004
+desc: Levantar servicios Docker (Postgres y Redis)
+command: "docker compose up -d"
+checkpoint: true
+max_retries: 1
+
+--- STEP
+type: shell
+id: QA-004s
+desc: Esperar que los contenedores estén completamente listos
+command: "sleep 7"
+checkpoint: true
+
+--- STEP
+type: shell
+id: QA-005
+desc: Health check de Postgres y Redis dentro de contenedores
+command: "docker compose ps && docker compose exec -T db pg_isready -U postgres -d mandadero && docker compose exec -T redis redis-cli ping"
+checkpoint: true
+max_retries: 1
+
+--- STEP
+type: shell
+id: QA-006
+desc: Aplicar migraciones y seed de base de datos
+command: "export $(grep -v '^#' .env.qa | xargs) && for i in 1 2 3 4 5; do docker compose exec -T db pg_isready -U postgres -d mandadero 2>/dev/null && break || sleep 2; done && for i in 1 2 3 4 5; do pg_isready -h localhost -U postgres -d mandadero 2>/dev/null && break || sleep 2; done && npx prisma db push --accept-data-loss && npx tsx prisma/seed.ts"
+checkpoint: true
+max_retries: 3
+
+--- STEP
+type: shell
+id: QA-007
+desc: Levantar servidor Express y verificar que responde
+command: "export $(grep -v '^#' .env.qa | xargs) && nohup npx tsx src/index.ts > /tmp/qa_server.log 2>&1 & sleep 4 && curl -s --max-time 5 http://localhost:3000/api/v1/nonexistent && echo '' && echo 'Servidor listo' || (echo 'Servidor no responde' && exit 1)"
+checkpoint: true
+timeout: 60

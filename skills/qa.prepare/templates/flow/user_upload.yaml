@@ -1,0 +1,52 @@
+--- STEP
+type: shell
+id: "{{ID}}-03"
+desc: Crear archivos dummy JPEG para {{NOMBRE}}
+command: "test -f /tmp/dummy_ine.jpg || printf '\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x00\\x00\\x01\\x00\\x01\\x00\\x00\\xff\\xd9' > /tmp/dummy_ine.jpg && test -f /tmp/dummy_selfie.jpg || printf '\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x00\\x00\\x01\\x00\\x01\\x00\\x00\\xff\\xd9' > /tmp/dummy_selfie.jpg && echo 'Archivos dummy listos'"
+
+--- STEP
+type: shell
+id: "{{ID}}-04"
+desc: "Subir documentos de identidad de {{NOMBRE}}"
+command: "curl -s -X POST http://localhost:3000/api/v1/auth/verify-identity -H 'Authorization: Bearer {{TOKEN_OLD}}' -F 'foto_ine=@/tmp/dummy_ine.jpg;type=image/jpeg' -F 'foto_vivo=@/tmp/dummy_selfie.jpg;type=image/jpeg'"
+
+--- STEP
+type: shell
+id: "{{ID}}-04s"
+desc: "Esperar procesamiento de verificacion de {{NOMBRE}}"
+command: "sleep 7"
+checkpoint: true
+
+--- STEP
+type: http
+id: "{{ID}}-05"
+desc: "Verificar estado de verificacion de {{NOMBRE}} (debe ser aprobado)"
+method: GET
+url: http://localhost:3000/api/v1/auth/verification-status
+headers:
+  Authorization: "Bearer {{TOKEN_OLD}}"
+expected:
+  status: 200
+body_verify:
+  estado: "aprobado"
+
+--- STEP
+type: http
+id: "{{ID}}-06"
+desc: "Refrescar token para actualizar estado de verificacion de {{NOMBRE}}"
+method: POST
+url: http://localhost:3000/api/v1/auth/refresh
+headers:
+  Content-Type: application/json
+body:
+  refresh_token: "{{REFRESH_TOKEN}}"
+expected:
+  status: 200
+  body_contains: ["token", "refresh_token"]
+extract:
+  - var: "{{TOKEN_NEW_VAR}}"
+    path: "$.token"
+    required: true
+  - var: "{{REFRESH_NEW_VAR}}"
+    path: "$.refresh_token"
+    required: true

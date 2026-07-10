@@ -1,0 +1,10 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Acceso denegado a admin - listar verificaciones"
+method: GET
+url: http://localhost:3000/api/v1/admin/verificaciones-pendientes
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+expected:
+  status: 403

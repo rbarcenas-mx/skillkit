@@ -1,0 +1,51 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Mandadero envia oferta al mandado"
+method: POST
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/ofertas"
+headers:
+  Authorization: "Bearer {{MANDADERO_TOKEN}}"
+  Content-Type: application/json
+body:
+  monto_ofertado: 50.00
+expected:
+  status: 201
+  body_contains: ["id", "estado"]
+extract:
+  - var: "{{OFERTA_ID_EXTRACT}}"
+    path: "$.id"
+checkpoint: true
+
+--- STEP
+type: shell
+id: "{{ID}}-01s"
+desc: "Esperar propagacion de BD tras crear oferta"
+command: "sleep 7"
+checkpoint: true
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Solicitante lista ofertas"
+method: GET
+url: "http://localhost:3000/api/v1/mandados/{{MANDADO_ID_VAR}}/ofertas"
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+expected:
+  status: 200
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "Solicitante acepta la oferta"
+method: PATCH
+url: "http://localhost:3000/api/v1/ofertas/{{OFERTA_ID_VAR}}"
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+  Content-Type: application/json
+body:
+  accion: "aceptada"
+expected:
+  status: 200
+  body_contains: ["mensaje", "contacto_mandadero"]

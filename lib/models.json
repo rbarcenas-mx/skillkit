@@ -1,0 +1,188 @@
+{
+  "config": {
+    "modo": "low",
+    "fallback_remoto": true
+  },
+  "local": [
+    {
+      "id": "deepseek-r1:32b",
+      "proveedor": "ollama",
+      "descripcion": "Deep reasoning, good for planning, audit and QA plan generation",
+      "velocidad": "slow",
+      "costo_tokens": 0
+    },
+    {
+      "id": "deepseek-coder-v2:16b",
+      "proveedor": "ollama",
+      "descripcion": "Code generation and technical review",
+      "velocidad": "medium",
+      "costo_tokens": 0
+    },
+    {
+      "id": "gemma4:26b",
+      "proveedor": "ollama",
+      "descripcion": "General multilingual model, good for varied tasks",
+      "velocidad": "medium",
+      "costo_tokens": 0
+    },
+    {
+      "id": "gemma4:audit",
+      "proveedor": "ollama",
+      "descripcion": "Lightweight Gemma 4 for audits and quick reviews",
+      "velocidad": "fast",
+      "costo_tokens": 0
+    }
+  ],
+  "remoto": [
+    {
+      "id": "deepseek-v4-flash",
+      "proveedor": "deepseek",
+      "descripcion": "Fast DeepSeek model, good cost-quality for general tasks",
+      "velocidad": "fast",
+      "costo_tokens": "low"
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "proveedor": "deepseek",
+      "descripcion": "Premium DeepSeek model, deep reasoning for complex tasks",
+      "velocidad": "medium",
+      "costo_tokens": "low"
+    },
+    {
+      "id": "opencode-go/deepseek-v4-flash",
+      "proveedor": "opencode-go",
+      "descripcion": "DeepSeek V4 Flash via opencode-go",
+      "velocidad": "fast",
+      "costo_tokens": "low"
+    },
+    {
+      "id": "opencode-go/deepseek-v4-pro",
+      "proveedor": "opencode-go",
+      "descripcion": "DeepSeek V4 Pro via opencode-go",
+      "velocidad": "medium",
+      "costo_tokens": "low"
+    },
+    {
+      "id": "opencode-go/kimi-k2.7-code",
+      "proveedor": "opencode-go",
+      "descripcion": "Kimi K2.7 Code via opencode-go, code-specialized",
+      "velocidad": "medium",
+      "costo_tokens": "medium"
+    },
+    {
+      "id": "opencode-go/glm-5.2",
+      "proveedor": "opencode-go",
+      "descripcion": "GLM 5.2 via opencode-go, multilingual with strong reasoning",
+      "velocidad": "medium",
+      "costo_tokens": "high"
+    },
+    {
+      "id": "opencode-go/mimo-v2.5",
+      "proveedor": "opencode-go",
+      "descripcion": "MiMo V2.5 via opencode-go, ultra-fast and economical",
+      "velocidad": "fast",
+      "costo_tokens": "low"
+    },
+    {
+      "id": "opencode-go/mimo-v2.5-pro",
+      "proveedor": "opencode-go",
+      "descripcion": "MiMo V2.5 Pro via opencode-go, premium with better quality",
+      "velocidad": "medium",
+      "costo_tokens": "medium"
+    },
+    {
+      "id": "opencode-go/qwen3.7-max",
+      "proveedor": "opencode-go",
+      "descripcion": "Qwen 3.7 Max via opencode-go, maximum quality",
+      "velocidad": "medium",
+      "costo_tokens": "high"
+    },
+    {
+      "id": "opencode-go/qwen3.7-plus",
+      "proveedor": "opencode-go",
+      "descripcion": "Qwen 3.7 Plus via opencode-go, balanced cost-quality",
+      "velocidad": "fast",
+      "costo_tokens": "low"
+    }
+  ],
+  "skill_mapping": {
+    "prespec": {
+      "task": "Idea analysis, ambiguity detection",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/glm-5.2"
+    },
+    "ci.prepare": {
+      "task": "Planning and classification for CI integration",
+      "low": "deepseek-r1:32b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/glm-5.2"
+    },
+    "qa.prepare": {
+      "task": "QA validation plan generation",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-pro",
+      "high": "opencode-go/glm-5.2"
+    },
+    "audit.spec_plan_tasks": {
+      "task": "Audit of specifications, plans and tasks",
+      "low": "gemma4:audit",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/glm-5.2"
+    },
+    "audit.codigo": {
+      "task": "Code audit against specification",
+      "low": "deepseek-coder-v2:16b",
+      "medium": "opencode-go/kimi-k2.7-code",
+      "high": "opencode-go/kimi-k2.7-code"
+    },
+    "pr-review": {
+      "task": "Pull Request review (blast radius, security, breaking changes)",
+      "low": "deepseek-coder-v2:16b",
+      "medium": "opencode-go/kimi-k2.7-code",
+      "high": "opencode-go/kimi-k2.7-code"
+    },
+    "audit.resolve_spec": {
+      "task": "Finding resolution in spec, plan and tasks",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/deepseek-v4-pro"
+    },
+    "audit.resolve_codigo": {
+      "task": "Finding resolution in code",
+      "low": "deepseek-coder-v2:16b",
+      "medium": "opencode-go/kimi-k2.7-code",
+      "high": "opencode-go/kimi-k2.7-code"
+    },
+    "audit.lint": {
+      "task": "Linting and typecheck audit (ESLint, tsc --noEmit)",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/deepseek-v4-pro"
+    },
+    "diagrams": {
+      "task": "Mermaid.js diagram generation",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/deepseek-v4-pro"
+    },
+    "qa.execute": {
+      "task": "Failure diagnosis during QA execution",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/deepseek-v4-pro"
+    },
+    "ci.execute": {
+      "task": "CI task execution coordination (local commits, rollback, dependencies)",
+      "low": "gemma4:audit",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/glm-5.2"
+    },
+    "ci.ship": {
+      "task": "Pre-push validation, review coordination, push and CI monitoring",
+      "low": "gemma4:26b",
+      "medium": "opencode-go/deepseek-v4-flash",
+      "high": "opencode-go/glm-5.2"
+    }
+  }
+}

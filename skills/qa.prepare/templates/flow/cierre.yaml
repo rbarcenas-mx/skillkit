@@ -1,0 +1,61 @@
+--- STEP
+type: http
+id: "{{ID}}-01"
+desc: "Refrescar token de acceso (rota el refresh token)"
+method: POST
+url: http://localhost:3000/api/v1/auth/refresh
+headers:
+  Content-Type: application/json
+body:
+  refresh_token: "{{REFRESH_TOKEN_OLD}}"
+expected:
+  status: 200
+  body_contains: ["token", "refresh_token"]
+extract:
+  - var: "{{NEW_TOKEN_VAR}}"
+    path: "$.token"
+    required: true
+  - var: "{{NEW_REFRESH_VAR}}"
+    path: "$.refresh_token"
+    required: true
+
+--- STEP
+type: http
+id: "{{ID}}-02"
+desc: "Cerrar sesion (logout) con el nuevo refresh token"
+method: POST
+url: http://localhost:3000/api/v1/auth/logout
+headers:
+  Authorization: "Bearer {{NEW_TOKEN_VAR_REF}}"
+  Content-Type: application/json
+body:
+  refresh_token: "{{NEW_REFRESH_VAR_REF}}"
+expected:
+  status: 200
+  body_contains: ["mensaje"]
+
+--- STEP
+type: http
+id: "{{ID}}-03"
+desc: "Eliminar cuenta del solicitante"
+method: DELETE
+url: http://localhost:3000/api/v1/auth/cuenta
+headers:
+  Authorization: "Bearer {{SOLICITANTE_TOKEN}}"
+expected:
+  status: 200
+  body_contains: ["mensaje"]
+
+--- STEP
+type: http
+id: "{{ID}}-04"
+desc: "Verificar que el usuario ya no existe (401)"
+method: POST
+url: http://localhost:3000/api/v1/auth/verify-otp
+headers:
+  Content-Type: application/json
+body:
+  telefono: "{{TELEFONO}}"
+  codigo: "123456"
+expected:
+  status: 401
