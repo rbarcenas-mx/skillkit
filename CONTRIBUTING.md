@@ -15,7 +15,7 @@ skillkit/skills/<skill-name>/
 
 ## Step 1: `models.json` — Register the skill
 
-Add an entry to `lib/models.json` → `skill_mapping`:
+Add an entry to `lib/models.json` → `skill_mapping`. **Ask the user what models they want for each TOKEN_BUDGET level.**
 
 ```json
 {
@@ -31,6 +31,12 @@ Add an entry to `lib/models.json` → `skill_mapping`:
 - `low` — local model via Ollama, zero cost
 - `medium` — remote balanced model
 - `high` — remote premium model
+
+**If the user doesn't know which models to pick:**
+1. For `low`: run `ollama list` and suggest the first available model that fits the task. If none are pulled, suggest `gemma4:26b` as a general default and tell the user to `ollama pull gemma4:26b`.
+2. For `medium`: suggest `opencode-go/deepseek-v4-flash` (works out of the box with opencode-go auth).
+3. For `high`: suggest `opencode-go/glm-5.2` or ask if they have API keys for Claude/GPT/etc.
+4. Write the entry only after the user confirms the three models.
 
 ## Step 2: `run.py` — The executor
 
