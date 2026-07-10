@@ -64,11 +64,11 @@ WARNING: TOKEN_BUDGET=low → 'gemma4:26b' not found in Ollama
 
 ## Prerequisites
 
-Models in `lib/models.json` must be available and configured:
+The models referenced in `lib/models.json` for each `TOKEN_BUDGET` level must be made available by you. SkillKit selects the model — you provide the access.
 
-- **Ollama** (for `TOKEN_BUDGET=low`): `ollama pull <model>` for each model you intend to use
-- **Remote providers** (for `TOKEN_BUDGET=medium/high`): API key must be accessible via the provider's auth mechanism
-- The token budget engine falls back gracefully if a model is unavailable
+- **Local models** (`TOKEN_BUDGET=low`): pull with `ollama pull <model>` for each model listed in your chosen level
+- **Remote models** (`TOKEN_BUDGET=medium/high`): the API key for each provider must be accessible to the curl calls made by run.py (typically via environment variables or an auth config file — your agent's standard mechanism for providing secrets)
+- If a model is not available, SkillKit **does not crash** — it warns and falls back gracefully to the next available tier, or keeps your current model
 
 ## Quick start
 
