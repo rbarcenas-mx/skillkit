@@ -4,11 +4,42 @@
 
 **Skills + Token Budget Engine** — Anthropic-format skills with built-in model routing that respects your token spend budget.
 
+## Architecture: Orchestrator + Executor
+
+Every skill in SkillKit follows the **Orchestrator + Executor** pattern — the strategy that Anthropic and other AI labs now recommend as the optimal way to manage token costs without sacrificing quality.
+
+```
+Remote Agent (Orchestrator)                    Local System (Executor)
+   ┌──────────────────────┐                   ┌──────────────────────────┐
+   │  Advisor model       │                   │  Worker model            │
+   │  (Claude, GPT, etc.)  │                   │  (via TOKEN_BUDGET)      │
+   │                      │                   │                          │
+   │  • Decompose task     │  ── atomic ──→   │  • run.py call #1        │
+   │  • Show progress bar  │     calls        │  • run.py call #2        │
+   │  • Save checkpoints   │  ←── JSON ────   │  • run.py call #N        │
+   │  • Present results    │                  │                          │
+   │  • Token accounting   │                  │  Returns structured       │
+   └──────────────────────┘                   │  result on stdout,       │
+                                              │  progress on stderr      │
+                                              └──────────────────────────┘
+```
+
+The **orchestrator** (the remote agent — Claude Code, opencode, Copilot, etc.) is the "advisor" model. It reads `SKILL.md`, breaks the work into atomic one-shot calls to `run.py`, shows live progress to the user after each step, manages fault-tolerant checkpoints for resume, presents an initial execution plan and a final consolidated report, and tracks token consumption per phase.
+
+The **executor** (`run.py`) is the "worker" — resolved via `TOKEN_BUDGET` to the cheapest adequate model (local Ollama at $0, or a remote model at low/medium/high cost). It does one thing, returns one JSON on stdout, and exits. No orchestration logic in the executor.
+
+This separation means:
+
+- **You control the cost**: expensive reasoning stays in the orchestrator; the executor runs on the model you choose via `TOKEN_BUDGET`
+- **Fault tolerance**: if an executor call fails, the orchestrator can retry, skip, or abort without losing progress — checkpoints guarantee resume
+- **Live feedback**: the orchestrator shows a progress bar and findings after every single executor call
+- **Audit trail**: initial plan → each executor call result → final token report
+
 ## What is this?
 
-SkillKit provides a set of ready-to-use development skills (CI, QA, audit, reviews, diagrams) plus a **token budget engine** (`lib/`) that automatically selects the right model for each task based on how much you want to spend on inference tokens. Every model referenced in `lib/models.json` must be available and configured by you — SkillKit provides the mapping, you provide the access.
+SkillKit provides 10 ready-to-use development skills (CI, QA, audit, reviews, diagrams) built on this pattern, plus a **token budget engine** (`lib/`) that automatically selects the right model for the executor based on how much you want to spend. Every model referenced in `lib/models.json` must be available and configured by you — SkillKit provides the mapping, you provide the access.
 
-| `TOKEN_BUDGET` | Target models | Token cost | Use case |
+| `TOKEN_BUDGET` | Executor model range | Token cost | Use case |
 |---|---|---|---|
 | `low` | Ollama local (gemma4, deepseek-coder, deepseek-r1) | $0 | Daily development |
 | `medium` | Remote balanced (deepseek-v4-flash, kimi-k2.7) | $$ | Pre-push QA |
