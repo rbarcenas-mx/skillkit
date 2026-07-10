@@ -64,11 +64,11 @@ WARNING: TOKEN_BUDGET=low → 'gemma4:26b' not found in Ollama
 
 ## Prerequisites
 
-Models in `lib/models.json` must be available:
+Models in `lib/models.json` must be available and configured:
 
-- **Ollama**: `ollama pull <model>` for each local model you intend to use
-- **Remote providers**: configured in `~/.config/opencode/opencode.json` or via `/connect` in opencode
-- **API keys**: stored in `~/.local/share/opencode/auth.json` for opencode-go fallback
+- **Ollama** (for `TOKEN_BUDGET=low`): `ollama pull <model>` for each model you intend to use
+- **Remote providers** (for `TOKEN_BUDGET=medium/high`): API key must be accessible via the provider's auth mechanism
+- The token budget engine falls back gracefully if a model is unavailable
 
 ## Quick start
 
