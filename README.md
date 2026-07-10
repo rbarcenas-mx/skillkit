@@ -4,7 +4,7 @@
 
 Engineering teams shouldn't spend their time on repetitive operational work.
 
-Throughout my career as an Engineering Manager, I've found that most delivery bottlenecks are not caused by complex technical problems -- they come from manual, inconsistent, or fragmented engineering processes. A pull request that takes days to review. A CI pipeline that fails for reasons nobody documents. A QA cycle that relies on tribal knowledge. The same questions asked in every spec review.
+A pull request that takes days to review. A CI pipeline that fails for reasons nobody documents. A QA cycle that relies on tribal knowledge. The same questions asked in every spec review.
 
 SkillKit is a collection of AI-powered engineering skills I built to help development teams automate those repetitive tasks, improve consistency across projects, and give developers more time to focus on solving real engineering problems.
 
