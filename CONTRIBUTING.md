@@ -2,6 +2,24 @@
 
 This document describes how to create a new skill that follows the SkillKit pattern. Every skill in this repo must implement the **Orchestrator + Executor** architecture: the orchestrator (SKILL.md) decomposes the problem into atomic calls, and the executor (run.py) does one thing per call using a model resolved via `TOKEN_BUDGET`.
 
+## Before you start — ask the user
+
+Before writing any file, clarify these points with the user. Don't guess or assume defaults without confirmation.
+
+| Question | Why it matters |
+|---|---|
+| **Skill name** — e.g. `my-linter` | Directory name, command name, models.json key |
+| **One-line description** — e.g. "Lint Python files using a local model" | Frontmatter, models.json `task` field |
+| **What does it do?** — describe the task in 2-3 sentences | System prompt design, SKILL.md steps, run.py logic |
+| **Input** — what does the skill read? (file, diff, spec, user text) | run.py env vars, payload construction |
+| **Output** — what does it produce? (report, file, JSON, diagram) | run.py stdout format, SKILL.md presentation |
+| **Complexity** — single call or multiple batches? | Checkpoint requirement, SKILL.md loop vs single step |
+| **Dependencies** — Ollama, Docker, npm, gh, curl, specific Python libs? | Prerequisites section in SKILL.md |
+| **Target language** — Spanish (default) or English? | System prompt language, generated content |
+| **Want a CLI command?** — `/my-skill` via opencode? | Create `commands/<name>.md` or skip |
+
+If the user says "I don't know" for any of these, use the most common defaults: Spanish, single-shot, no extra dependencies, no CLI command, task description from the skill name.
+
 ## Directory structure
 
 ```
