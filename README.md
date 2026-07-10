@@ -167,17 +167,208 @@ This project builds upon and adapts open-source skills from the AI coding commun
 
 See [CREDITS.md](CREDITS.md) for detailed attributions.
 
-## Creating new skills
+## How to extend SkillKit with new skills
 
-```bash
-# Via opencode CLI
-/new-skill my-tool "Does X thing with local model"
+Every skill is a directory under `skills/<name>/` following the **Orchestrator + Executor** pattern. You add three things: a `models.json` entry, a `run.py` executor, and a `SKILL.md` orchestrator.
 
-# Or tell any AI agent:
-"Read $SKILLKIT_HOME/CONTRIBUTING.md and create a skill called my-tool"
+### 1. Register in models.json
+
+Add an entry to `lib/models.json` → `skill_mapping`:
+
+```json
+{
+  "my-skill": {
+    "task": "What it does",
+    "low": "gemma4:26b",
+    "medium": "opencode-go/deepseek-v4-flash",
+    "high": "opencode-go/glm-5.2"
+  }
+}
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete guide — structure, executor pattern, model mapping, required features, and golden rules.
+`low/medium/high` map to `TOKEN_BUDGET` levels. Low is always a local model via Ollama.
+
+### 2. Create the executor (`skills/<name>/run.py`)
+
+Minimal scaffold:
+
+```python
+#!/usr/bin/env python3
+import json, os, subprocess, sys, threading, time
+
+sys.stderr.reconfigure(line_buffering=True)
+sys.path.insert(0, os.environ["SKILLKIT_HOME"])
+from lib import resolve_model
+
+MODEL = resolve_model("my-skill")
+SKILL_NAME = "my-skill"
+PROGRESS_FILE = f"/tmp/opencode/{SKILL_NAME}_progress.json"
+
+def log(msg):
+    print(msg, file=sys.stderr, flush=True)
+
+def spinner(stop, label="Processing"):
+    frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+    t0 = time.time()
+    while not stop.is_set():
+        sys.stderr.write(f'\r  {frames[int(time.time()*10)%len(frames)]} {label} ({time.time()-t0:.0f}s)   ')
+        sys.stderr.flush()
+        time.sleep(0.1)
+    sys.stderr.write(f'\r  \u2705 {label} — done ({time.time()-t0:.1f}s)\n')
+    sys.stderr.flush()
+
+def save_progress(phase, status="running"):
+    os.makedirs("/tmp/opencode", exist_ok=True)
+    with open(PROGRESS_FILE, "w") as f:
+        json.dump({"phase": phase, "status": status}, f)
+
+# Build payload, send with curl, auth via -K conf file
+payload = {"model": MODEL, "messages": [...]}
+with open("/tmp/opencode/my_skill_payload.json", "w") as f:
+    json.dump(payload, f)
+
+curl = ["curl", "-s", "-X", "POST", URL, "-H", "Content-Type: application/json"]
+if API_KEY:
+    os.makedirs("/tmp/opencode", exist_ok=True)
+    with open("/tmp/opencode/skillkit_headers.conf", "w") as hf:
+        hf.write(f"Authorization: Bearer {API_KEY}\n")
+    curl += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+
+save_progress("running")
+stop = threading.Event()
+threading.Thread(target=spinner, args=(stop,)).start()
+try:
+    r = subprocess.run(curl + ["-d", "@/tmp/opencode/my_skill_payload.json"],
+                       capture_output=True, text=True, timeout=600)
+finally:
+    stop.set()
+
+save_progress("done")
+result = {"status": "ok", "result": r.stdout}
+print(json.dumps(result))
+```
+
+Key rules:
+- **API keys never in argv**: use `-K <conf_file>` for Authorization headers
+- **JSON on stdout**, progress on stderr
+- **Spinner** for model calls longer than a few seconds
+- **Checkpoint** at `/tmp/opencode/<skill>_progress.json`
+- **`os.environ["SKILLKIT_HOME"]`** not hardcoded paths
+
+### 3. Create the orchestrator (`skills/<name>/SKILL.md`)
+
+```markdown
+---
+name: my-skill
+description: One-line description with usage. Usage: /my-skill
+---
+
+# my-skill
+
+## Architecture
+
+```
+Orchestrator (this agent)
+  ├─ 1. Resolve WORKDIR
+  ├─ 2. Resolve model + show TOKEN_BUDGET
+  ├─ 3. Show execution plan
+  ├─ 4. Copy run.py → execute analysis
+  │     └─ run.py returns JSON
+  ├─ 5. Present results
+  ├─ 6. Execution report
+  └─ 7. Token report
+```
+
+## Step 1 — Resolve working directory
+
+```bash
+pwd
+```
+
+## Step 2 — Resolve model and show TOKEN_BUDGET
+
+```bash
+python3 -c "
+import sys, os
+sys.path.insert(0, os.environ['SKILLKIT_HOME'])
+from lib import resolve_model
+m = resolve_model('my-skill')
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', '?'))
+print('Model:', m)
+print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+"
+```
+
+Display:
+
+```
+╔══════════════════════════════════════════════════╗
+║           MY-SKILL                               ║
+╠══════════════════════════════════════════════════╣
+║  TOKEN_BUDGET:    <mode>                        ║
+║  Model:          <model>                       ║
+║  Provider:       <provider>                    ║
+║  Description:    <brief>                       ║
+╚══════════════════════════════════════════════════╝
+```
+
+## Step 3 — Execution plan
+
+Briefly list phases so the user knows what to expect.
+
+## Step N-1 — Execution report
+
+```
+╔══════════════════════════════════════════════════╗
+║           EXECUTION COMPLETED                    ║
+╠══════════════════════════════════════════════════╣
+║  Steps:          N completed                     ║
+║  Duration:        Xm Ys                          ║
+╚══════════════════════════════════════════════════╝
+```
+
+## Step N — Token report
+
+```
+| Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
+|---|---|---|---|---|---|---|
+| **Remote**               |       |             |              |             |      |
+| SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
+| **Total remote**         |       |             |              | **X,XXX**   |      |
+|                          |       |             |              |             |      |
+| **Local**                |       |             |              |             |      |
+| Analysis (run.py)        | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
+| **Total local**          | **1** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
+|---|---|---|---|---|---|---|
+| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
+| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+```
+```
+
+### 4. (Optional) Add a CLI command reference
+
+If you use opencode, add `commands/<name>.md`:
+
+```markdown
+---
+description: One-line with usage. Usage: /my-skill [args]
+---
+
+Load the `my-skill` skill via the `skill` tool and execute the steps defined in its SKILL.md.
+
+**Arguments**: `$ARGUMENTS` — description of arguments.
+```
+
+### Golden rules for all skills
+
+1. **Orchestrator delegates**, executor executes. No heavy model calls in SKILL.md steps.
+2. **API keys** go to `/tmp/opencode/skillkit_headers.conf`, never in `-H` argv flags.
+3. **Graceful degradation**: if a model isn't available, warn and fall back. Never crash.
+4. **`os.environ["SKILLKIT_HOME"]`** everywhere — no hardcoded `~/.config/opencode` or `~/.claude/skills`.
+5. **JSON on stdout**, progress on stderr. Always `{"status": "ok|error", ...}` as final print.
+6. **Progress checkpoint** at `/tmp/opencode/<skill>_progress.json` for multi-step or multi-batch skills.
+7. **English** in SKILL.md and run.py (comments, logs, error messages). System prompts keep the target language of generated content (typically Spanish).
+8. **Token report** as final step in every SKILL.md.
 
 ## License
 
