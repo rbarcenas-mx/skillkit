@@ -167,6 +167,10 @@ This project builds upon and adapts open-source skills from the AI coding commun
 
 See [CREDITS.md](CREDITS.md) for detailed attributions.
 
+## Creating new skills
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete guide on creating skills that follow the SkillKit pattern — frontmatter, executor pattern, model mapping, required features, and golden rules.
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for full text.
