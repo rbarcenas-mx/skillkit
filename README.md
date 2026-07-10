@@ -169,7 +169,15 @@ See [CREDITS.md](CREDITS.md) for detailed attributions.
 
 ## Creating new skills
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete guide on creating skills that follow the SkillKit pattern — frontmatter, executor pattern, model mapping, required features, and golden rules.
+```bash
+# Via opencode CLI
+/new-skill my-tool "Does X thing with local model"
+
+# Or tell any AI agent:
+"Read $SKILLKIT_HOME/CONTRIBUTING.md and create a skill called my-tool"
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete guide — structure, executor pattern, model mapping, required features, and golden rules.
 
 ## License
 
