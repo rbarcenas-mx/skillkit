@@ -23,6 +23,10 @@ sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
 API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+_chat_url = API_URL.rstrip('/')
+if not _chat_url.endswith('/chat/completions'):
+    _chat_url += '/chat/completions'
+API_URL = _chat_url
 API_KEY = os.environ.get("OPENCODE_API_KEY", "")
 
 def log(msg):
