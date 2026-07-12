@@ -6,11 +6,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Engineering teams shouldn't spend their time on repetitive operational work.
+As an engineering manager, I'm always looking for ways to reduce repetitive work in my team so they can spend more time on what they do best: solving real engineering problems.
 
-A pull request that takes days to review. A CI pipeline that fails for reasons nobody documents. A QA cycle that relies on tribal knowledge. The same questions asked in every spec review.
-
-SkillKit is a collection of AI-powered engineering skills I built to help development teams automate those repetitive tasks, improve consistency across projects, and give developers more time to focus on solving real engineering problems.
+SkillKit is a collection of AI-powered engineering skills that aim to help development teams automate repetitive operational tasks, improve consistency across projects, and free up time for deep engineering work.
 
 Every skill is designed around a simple insight: **use the right model for the right job**. A cheap local model can lint code, parse YAML, or check a checklist. An expensive remote model should only be invoked for critical path decisions. SkillKit's token budget engine makes this automatic.
 
