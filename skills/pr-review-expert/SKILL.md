@@ -13,6 +13,8 @@ description: Use when the user asks to review pull requests, analyze code change
 
 # PR Review Expert — Pull Request Review
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (reviews, findings) must also be in the user's language.
+
 ## Purpose
 
 Review GitHub/GitLab PRs in a structured way, delegating ALL analysis to the model resolved via `resolve_model("pr-review")` according to TOKEN_BUDGET. `run.py` receives the diff, splits it into batches if large, sends it to the model for blast radius, security, breaking changes, performance, testing, and code quality analysis, and consolidates findings.
@@ -219,24 +221,20 @@ Verdict: REQUEST_CHANGES
 
 ## Step 8 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
-| **Total remote**         |       |             |              | **X,XXX**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Batch 1                  | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| Batch 2                  | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| Consolidation            | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
-Adjust based on actual number of batches and token counts.
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
@@ -254,4 +252,4 @@ Adjust based on actual number of batches and token counts.
 - **No here-documents**: Always Write + Bash separately.
 - **Payload via file**: run.py writes payload to `/tmp/opencode/pr_review_payload.json`.
 - **Credentials**: If using Jira/Linear, pass credentials via stdin (`curl -K -`), never in argv.
-- **Language**: All generated content (PR reports, model prompts, findings) in Spanish without accents or special characters.
+- **Language**: All generated content (PR reports, model prompts, findings) must be in the user's language without accents or special characters.
