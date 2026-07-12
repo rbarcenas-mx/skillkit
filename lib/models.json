@@ -1,108 +1,133 @@
 {
   "config": {
-    "modo": "low",
-    "fallback_remoto": true
+    "mode": "low",
+    "fallback_chain": ["medium", "high", "low"],
+    "config_file": "~/.config/skillkit/config.json"
   },
-  "local": [
+  "providers": {
+    "ollama": {
+      "base_url": "http://localhost:11434/v1",
+      "api_key": ""
+    },
+    "deepseek": {
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "{env:DEEPSEEK_API_KEY}"
+    },
+    "opencode-go": {
+      "base_url": "https://opencode.ai/zen/go/v1",
+      "api_key": "{env:OPENCODE_API_KEY}"
+    },
+    "anthropic": {
+      "base_url": "https://api.anthropic.com/v1",
+      "api_key": "{env:ANTHROPIC_API_KEY}"
+    }
+  },
+  "models": [
     {
       "id": "deepseek-r1:32b",
-      "proveedor": "ollama",
-      "descripcion": "Deep reasoning, good for planning, audit and QA plan generation",
-      "velocidad": "slow",
-      "costo_tokens": 0
+      "provider": "ollama",
+      "description": "Deep reasoning, good for planning, audit and QA plan generation",
+      "speed": "slow",
+      "token_cost": 0
     },
     {
       "id": "deepseek-coder-v2:16b",
-      "proveedor": "ollama",
-      "descripcion": "Code generation and technical review",
-      "velocidad": "medium",
-      "costo_tokens": 0
+      "provider": "ollama",
+      "description": "Code generation and technical review",
+      "speed": "medium",
+      "token_cost": 0
     },
     {
       "id": "gemma4:26b",
-      "proveedor": "ollama",
-      "descripcion": "General multilingual model, good for varied tasks",
-      "velocidad": "medium",
-      "costo_tokens": 0
+      "provider": "ollama",
+      "description": "General multilingual model, good for varied tasks",
+      "speed": "medium",
+      "token_cost": 0
     },
     {
       "id": "gemma4:audit",
-      "proveedor": "ollama",
-      "descripcion": "Lightweight Gemma 4 for audits and quick reviews",
-      "velocidad": "fast",
-      "costo_tokens": 0
-    }
-  ],
-  "remoto": [
+      "provider": "ollama",
+      "description": "Lightweight Gemma 4 for audits and quick reviews",
+      "speed": "fast",
+      "token_cost": 0
+    },
     {
       "id": "deepseek-v4-flash",
-      "proveedor": "deepseek",
-      "descripcion": "Fast DeepSeek model, good cost-quality for general tasks",
-      "velocidad": "fast",
-      "costo_tokens": "low"
+      "provider": "deepseek",
+      "description": "Fast DeepSeek model, good cost-quality for general tasks",
+      "speed": "fast",
+      "token_cost": "low"
     },
     {
       "id": "deepseek-v4-pro",
-      "proveedor": "deepseek",
-      "descripcion": "Premium DeepSeek model, deep reasoning for complex tasks",
-      "velocidad": "medium",
-      "costo_tokens": "low"
+      "provider": "deepseek",
+      "description": "Premium DeepSeek model, deep reasoning for complex tasks",
+      "speed": "medium",
+      "token_cost": "low"
     },
     {
       "id": "opencode-go/deepseek-v4-flash",
-      "proveedor": "opencode-go",
-      "descripcion": "DeepSeek V4 Flash via opencode-go",
-      "velocidad": "fast",
-      "costo_tokens": "low"
+      "provider": "opencode-go",
+      "api_model": "deepseek-v4-flash",
+      "description": "DeepSeek V4 Flash via opencode-go",
+      "speed": "fast",
+      "token_cost": "low"
     },
     {
       "id": "opencode-go/deepseek-v4-pro",
-      "proveedor": "opencode-go",
-      "descripcion": "DeepSeek V4 Pro via opencode-go",
-      "velocidad": "medium",
-      "costo_tokens": "low"
+      "provider": "opencode-go",
+      "api_model": "deepseek-v4-pro",
+      "description": "DeepSeek V4 Pro via opencode-go",
+      "speed": "medium",
+      "token_cost": "low"
     },
     {
       "id": "opencode-go/kimi-k2.7-code",
-      "proveedor": "opencode-go",
-      "descripcion": "Kimi K2.7 Code via opencode-go, code-specialized",
-      "velocidad": "medium",
-      "costo_tokens": "medium"
+      "provider": "opencode-go",
+      "api_model": "kimi-k2.7-code",
+      "description": "Kimi K2.7 Code via opencode-go, code-specialized",
+      "speed": "medium",
+      "token_cost": "medium"
     },
     {
       "id": "opencode-go/glm-5.2",
-      "proveedor": "opencode-go",
-      "descripcion": "GLM 5.2 via opencode-go, multilingual with strong reasoning",
-      "velocidad": "medium",
-      "costo_tokens": "high"
+      "provider": "opencode-go",
+      "api_model": "glm-5.2",
+      "description": "GLM 5.2 via opencode-go, multilingual with strong reasoning",
+      "speed": "medium",
+      "token_cost": "high"
     },
     {
       "id": "opencode-go/mimo-v2.5",
-      "proveedor": "opencode-go",
-      "descripcion": "MiMo V2.5 via opencode-go, ultra-fast and economical",
-      "velocidad": "fast",
-      "costo_tokens": "low"
+      "provider": "opencode-go",
+      "api_model": "mimo-v2.5",
+      "description": "MiMo V2.5 via opencode-go, ultra-fast and economical",
+      "speed": "fast",
+      "token_cost": "low"
     },
     {
       "id": "opencode-go/mimo-v2.5-pro",
-      "proveedor": "opencode-go",
-      "descripcion": "MiMo V2.5 Pro via opencode-go, premium with better quality",
-      "velocidad": "medium",
-      "costo_tokens": "medium"
+      "provider": "opencode-go",
+      "api_model": "mimo-v2.5-pro",
+      "description": "MiMo V2.5 Pro via opencode-go, premium with better quality",
+      "speed": "medium",
+      "token_cost": "medium"
     },
     {
       "id": "opencode-go/qwen3.7-max",
-      "proveedor": "opencode-go",
-      "descripcion": "Qwen 3.7 Max via opencode-go, maximum quality",
-      "velocidad": "medium",
-      "costo_tokens": "high"
+      "provider": "opencode-go",
+      "api_model": "qwen3.7-max",
+      "description": "Qwen 3.7 Max via opencode-go, maximum quality",
+      "speed": "medium",
+      "token_cost": "high"
     },
     {
       "id": "opencode-go/qwen3.7-plus",
-      "proveedor": "opencode-go",
-      "descripcion": "Qwen 3.7 Plus via opencode-go, balanced cost-quality",
-      "velocidad": "fast",
-      "costo_tokens": "low"
+      "provider": "opencode-go",
+      "api_model": "qwen3.7-plus",
+      "description": "Qwen 3.7 Plus via opencode-go, balanced cost-quality",
+      "speed": "fast",
+      "token_cost": "low"
     }
   ],
   "skill_mapping": {

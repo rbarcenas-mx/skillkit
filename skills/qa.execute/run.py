@@ -29,12 +29,12 @@ from lib.recovery import ensure_docker
 import importlib.util
 _config = os.environ["SKILLKIT_HOME"]
 _spec = importlib.util.spec_from_file_location(
-    'opencode_lib',
+    'skillkit_lib',
     os.path.join(_config, 'lib', '__init__.py')
 )
-_opencode_lib = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_opencode_lib)
-resolve_model = _opencode_lib.resolve_model
+_skillkit_lib = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_skillkit_lib)
+resolve_model = _skillkit_lib.resolve_model
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -46,18 +46,18 @@ MODELO_JUSTIFICACION = {
 }
 
 def print_model_banner():
-    modo_raw = os.environ.get("OPENCODE_MODO", "?")
+    modo_raw = os.environ.get("SKILLKIT_MODE", "?")
     modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(modo_raw, modo_raw)
-    modelo = os.environ.get("OPENCODE_MODEL", "?")
-    proveedor = os.environ.get("OPENCODE_PROVEEDOR", "?")
-    desc = os.environ.get("OPENCODE_MODEL_DESC", "")
+    modelo = os.environ.get("SKILLKIT_MODEL", "?")
+    provider = os.environ.get("SKILLKIT_PROVIDER", "?")
+    desc = os.environ.get("SKILLKIT_MODEL_DESC", "")
     justificacion = MODELO_JUSTIFICACION.get(modo_raw, "")
-    es_local = proveedor == "ollama"
+    es_local = provider == "ollama"
     sys.stderr.write(f"\n{'='*54}\n")
     sys.stderr.write(f"  Modelo de Orquestacion\n")
     sys.stderr.write(f"{'─'*54}\n")
     sys.stderr.write(f"  Modo:       {modo_label}\n")
-    sys.stderr.write(f"  Modelo:     {modelo} ({proveedor})\n")
+    sys.stderr.write(f"  Modelo:     {modelo} ({provider})\n")
     sys.stderr.write(f"  Tipo:       {'Local ($0)' if es_local else 'Remoto ($$)'}\n")
     sys.stderr.write(f"  Descripcion: {desc}\n")
     sys.stderr.write(f"  Justificacion: {justificacion}\n")
@@ -66,16 +66,16 @@ def print_model_banner():
 
 def print_token_table(total_plans):
     n = total_plans
-    modo_raw = os.environ.get("OPENCODE_MODO", "?")
+    modo_raw = os.environ.get("SKILLKIT_MODE", "?")
     modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(modo_raw, modo_raw)
-    proveedor = os.environ.get("OPENCODE_PROVEEDOR", "ollama")
-    es_local = proveedor == "ollama"
+    provider = os.environ.get("SKILLKIT_PROVIDER", "ollama")
+    es_local = provider == "ollama"
 
     remoto_input = 2500 + 500 + 1000 + 2000 + 500
 
     if es_local:
         local_input = n * 1200
-        local_think = n * 6000 if "deepseek-r1" in os.environ.get("OPENCODE_MODEL", "") else 0
+        local_think = n * 6000 if "deepseek-r1" in os.environ.get("SKILLKIT_MODEL", "") else 0
         local_output = n * 2000
         local_total = local_input + local_think + local_output
     else:
@@ -113,7 +113,7 @@ def print_token_table(total_plans):
     sys.stderr.write(f"  {'% Remoto':<30} {pct_remoto:>11}%\n")
     sys.stderr.write(f"  {'% Local':<30} {pct_local:>11}%\n")
     if not es_local:
-        sys.stderr.write(f"\n  Nota: Modo {modo_label} usa modelo remoto ({os.environ.get('OPENCODE_MODEL', '?')}).\n")
+        sys.stderr.write(f"\n  Nota: Modo {modo_label} usa modelo remoto ({os.environ.get('SKILLKIT_MODEL', '?')}).\n")
         sys.stderr.write(f"  En modo Low estas tareas serian locales ($0) via Ollama.\n")
     sys.stderr.write(f"{'='*54}\n")
 
@@ -530,7 +530,7 @@ def main():
         sys.exit(1)
 
     os.chdir(workdir)
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    os.makedirs('/tmp/skillkit', exist_ok=True)
 
     # Detectar si es suite o plan individual por nombre de archivo
     if 'suite' in plan_file.lower():

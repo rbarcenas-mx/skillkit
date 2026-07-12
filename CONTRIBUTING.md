@@ -16,7 +16,7 @@ Before writing any file, clarify these points with the user. Don't guess or assu
 | **Complexity** — single call or multiple batches? | Checkpoint requirement, SKILL.md loop vs single step |
 | **Dependencies** — Ollama, Docker, npm, gh, curl, specific Python libs? | Prerequisites section in SKILL.md |
 | **Target language** — Spanish (default) or English? | System prompt language, generated content |
-| **Want a CLI command?** — `/my-skill` via opencode? | Create `commands/<name>.md` or skip |
+| **Want a CLI command?** — `/my-skill` via your agent? | Create `commands/<name>.md` or skip |
 
 If the user says "I don't know" for any of these, use the most common defaults: Spanish, single-shot, no extra dependencies, no CLI command, task description from the skill name.
 
@@ -40,8 +40,8 @@ Add an entry to `lib/models.json` → `skill_mapping`. **Ask the user what model
   "my-skill": {
     "task": "Brief description",
     "low": "gemma4:26b",
-    "medium": "opencode-go/deepseek-v4-flash",
-    "high": "opencode-go/glm-5.2"
+    "medium": "deepseek-v4-flash",
+    "high": "claude-sonnet-4"
   }
 }
 ```
@@ -50,10 +50,12 @@ Add an entry to `lib/models.json` → `skill_mapping`. **Ask the user what model
 - `medium` — remote balanced model
 - `high` — remote premium model
 
+Models are declared in `lib/models.json` under `models`. Each model references a `provider` defined in `lib/models.json` → `providers`. Provider `base_url` and `api_key` can be overridden per-user in `~/.config/skillkit/config.json`.
+
 **If the user doesn't know which models to pick:**
 1. For `low`: run `ollama list` and suggest the first available model that fits the task. If none are pulled, suggest `gemma4:26b` as a general default and tell the user to `ollama pull gemma4:26b`.
-2. For `medium`: suggest `opencode-go/deepseek-v4-flash` (works out of the box with opencode-go auth).
-3. For `high`: suggest `opencode-go/glm-5.2` or ask if they have API keys for Claude/GPT/etc.
+2. For `medium`: suggest a remote balanced model the user already has access to (e.g. `deepseek-v4-flash`).
+3. For `high`: suggest a remote premium model the user already has access to (e.g. Claude, GPT, GLM, Qwen). Ask which provider they prefer.
 4. Write the entry only after the user confirms the three models.
 
 ## Step 2: `run.py` — The executor
@@ -79,7 +81,7 @@ SKILL_NAME = "my-skill"
 MODEL = resolve_model(SKILL_NAME)
 ```
 
-This reads `TOKEN_BUDGET`, looks up `my-skill` in `models.json`, and returns the appropriate model ID. Sets `OPENCODE_MODEL`, `OPENCODE_PROVEEDOR`, etc. automatically. If the model is not available, degrades gracefully (warns + falls back, never crashes).
+This reads `TOKEN_BUDGET`, looks up `my-skill` in `models.json`, and returns the appropriate model ID. Sets `SKILLKIT_MODEL`, `SKILLKIT_PROVIDER`, `SKILLKIT_API_URL`, `SKILLKIT_API_KEY` automatically. If the model is not available, degrades gracefully (warns + falls back, never crashes).
 
 ### Spinner for API calls
 
@@ -103,21 +105,23 @@ def spinner_while_waiting(stop_event, label="Processing"):
 
 ```python
 payload = {"model": api_model, "messages": [...]}
-payload_path = "/tmp/opencode/my_skill_payload.json"
+payload_path = "/tmp/skillkit/my_skill_payload.json"
 with open(payload_path, "w") as f:
     json.dump(payload, f, ensure_ascii=False)
 
 headers = ["-H", "Content-Type: application/json"]
 if API_KEY:
-    os.makedirs("/tmp/opencode", exist_ok=True)
-    with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
+    os.makedirs("/tmp/skillkit", exist_ok=True)
+    with open("/tmp/skillkit/skillkit_headers.conf", "w") as _hf:
         _hf.write(f"Authorization: Bearer {API_KEY}\n")
-    headers += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+    headers += ["-K", "/tmp/skillkit/skillkit_headers.conf"]
 
 result = subprocess.run(["curl", "-s", "-X", "POST", url, *headers, "-d", "@" + payload_path], ...)
 ```
 
 Auth headers go to a temp conf file (`-K`), never in argv. This prevents API keys from being visible in `ps`.
+
+**V1.0 constraint:** the executor assumes an OpenAI-compatible API (`/chat/completions`, `Authorization: Bearer`). Non-OpenAI providers require an OpenAI-compatible proxy or a custom driver.
 
 ### JSON output
 
@@ -133,10 +137,10 @@ sys.exit(1)
 ### Progress checkpoint (required for multi-step skills)
 
 ```python
-PROGRESS_FILE = "/tmp/opencode/my_skill_progress.json"
+PROGRESS_FILE = "/tmp/skillkit/my_skill_progress.json"
 
 def save_progress(phase, total=0, completed=0, status="running"):
-    os.makedirs("/tmp/opencode", exist_ok=True)
+    os.makedirs("/tmp/skillkit", exist_ok=True)
     from datetime import datetime, timezone
     progress = {"phase": phase, "total": total, "completed": completed, "status": status, "timestamp": datetime.now(timezone.utc).isoformat()}
     with open(PROGRESS_FILE, "w") as f:
@@ -183,9 +187,10 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('my-skill')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
+print('API URL:', os.environ.get('SKILLKIT_API_URL', '?'))
 "
 ```
 
@@ -243,7 +248,7 @@ Briefly list the phases so the user knows what will happen.
 ```
 ```
 
-## Step 4: `commands/<skill>.md` — opencode CLI reference (optional)
+## Step 4: `commands/<skill>.md` — Agent CLI reference (optional)
 
 ```markdown
 ---
@@ -263,5 +268,5 @@ Load the `my-skill` skill via the `skill` tool and execute the steps defined in 
 4. **Graceful everything** — if a model isn't available, warn and fall back. Never crash.
 5. **SKILLKIT_HOME, not hardcoded paths** — all references use `os.environ["SKILLKIT_HOME"]`.
 6. **English in SKILL.md and run.py** (comments, logs, errors). System prompts keep the target language.
-7. **Checkpoint for multi-step** — `/tmp/opencode/<skill>_progress.json` saves after each step.
+7. **Checkpoint for multi-step** — `/tmp/skillkit/<skill>_progress.json` saves after each step.
 8. **Language** — All generated content (reports, diagrams, PR reviews, etc.) in Spanish without accents or special characters, unless the skill is explicitly for another language.

@@ -8,10 +8,10 @@ sys.stderr.reconfigure(line_buffering=True)
 
 CI_TASKS_FILE = os.environ.get('CI_TASKS_FILE', '')
 WORKDIR = os.environ.get('WORKDIR', '.')
-PROGRESS_FILE = '/tmp/opencode/ci_execute_progress.json'
+PROGRESS_FILE = '/tmp/skillkit/ci_execute_progress.json'
 
 os.chdir(WORKDIR)
-os.makedirs('/tmp/opencode', exist_ok=True)
+os.makedirs('/tmp/skillkit', exist_ok=True)
 
 if not CI_TASKS_FILE or not os.path.exists(CI_TASKS_FILE):
     print(f"ERROR: Task file not found: {CI_TASKS_FILE}", file=sys.stderr)

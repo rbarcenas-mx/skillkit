@@ -5,7 +5,7 @@ ci.prepare — Generate CI integration plan. Model resolved via resolve_model("c
 Receives repository diagnostics via JSON file and delegates analysis
 (file classification, commit strategy) to the local model.
 
-Input:  /tmp/opencode/ci_diagnostics.json
+Input:  /tmp/skillkit/ci_diagnostics.json
 Output: JSON on stdout with classification + commit_strategy
 """
 
@@ -23,7 +23,7 @@ sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
 TIMEOUT = 600
-PROGRESS_FILE = "/tmp/opencode/ci_prepare_progress.json"
+PROGRESS_FILE = "/tmp/skillkit/ci_prepare_progress.json"
 
 
 def log(msg: str) -> None:
@@ -60,7 +60,7 @@ def save_progress(phase: str, status: str = "running") -> None:
 def run_model(system_prompt: str, user_msg: str, skill_name: str,
               num_predict: int = 4096) -> tuple:
     resolve_model(skill_name)
-    api_model = os.environ.get("OPENCODE_MODEL", "")
+    api_model = os.environ.get("SKILLKIT_MODEL", "")
 
     payload = {
         "model": api_model, "stream": False,
@@ -70,13 +70,13 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
             {"role": "user", "content": user_msg},
         ],
     }
-    pfile = '/tmp/opencode/ci_prepare_payload.json'
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    pfile = '/tmp/skillkit/ci_prepare_payload.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(pfile, 'w') as f:
         json.dump(payload, f, ensure_ascii=False)
 
-    api_url = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
-    api_key = os.environ.get("OPENCODE_API_KEY", "")
+    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("SKILLKIT_API_KEY", "")
     headers = ["-H", "Content-Type: application/json"]
     if api_key:
         headers += ["-H", f"Authorization: Bearer {api_key}"]
@@ -227,7 +227,7 @@ Responde unicamente en espanol para los campos de texto libre (justification, re
 
 
 def main():
-    diag_path = os.environ.get("CI_DIAGNOSTICS_FILE", "/tmp/opencode/ci_diagnostics.json")
+    diag_path = os.environ.get("CI_DIAGNOSTICS_FILE", "/tmp/skillkit/ci_diagnostics.json")
     try:
         with open(diag_path, "r", encoding="utf-8") as f:
             diagnostics = json.load(f)
@@ -244,8 +244,8 @@ def main():
 
     user_msg = json.dumps(diagnostics, ensure_ascii=False, indent=2)
 
-    model_used = os.environ.get("OPENCODE_MODEL", "default model")
-    provider = os.environ.get("OPENCODE_PROVEEDOR", "local")
+    model_used = os.environ.get("SKILLKIT_MODEL", "default model")
+    provider = os.environ.get("SKILLKIT_PROVIDER", "local")
     log(f" Using model: {model_used} ({provider})")
 
     stop_spinner = threading.Event()

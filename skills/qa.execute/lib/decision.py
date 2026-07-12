@@ -64,8 +64,8 @@ def ask_model(step_id: str, desc: str, error: str) -> str:
     )
 
     modelo = resolve_model("qa.execute")
-    api_url = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
-    api_key = os.environ.get("OPENCODE_API_KEY", "")
+    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("SKILLKIT_API_KEY", "")
     if not api_url.endswith("/chat/completions"):
         api_url = api_url.rstrip("/") + "/chat/completions"
 
@@ -74,8 +74,8 @@ def ask_model(step_id: str, desc: str, error: str) -> str:
         "stream": False,
         "messages": [{"role": "user", "content": prompt}]
     }
-    payload_path = '/tmp/opencode/qa_execute_decision_payload.json'
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    payload_path = '/tmp/skillkit/qa_execute_decision_payload.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(payload_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -84,10 +84,10 @@ def ask_model(step_id: str, desc: str, error: str) -> str:
         "-H", "Content-Type: application/json",
     ]
     if api_key:
-        os.makedirs("/tmp/opencode", exist_ok=True)
-        with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
+        os.makedirs("/tmp/skillkit", exist_ok=True)
+        with open("/tmp/skillkit/skillkit_headers.conf", "w") as _hf:
             _hf.write(f"Authorization: Bearer {api_key}\n")
-        curl_cmd += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+        curl_cmd += ["-K", "/tmp/skillkit/skillkit_headers.conf"]
     curl_cmd += ["-d", "@" + payload_path]
 
     result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=120)

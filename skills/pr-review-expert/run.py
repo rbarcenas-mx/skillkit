@@ -33,12 +33,12 @@ sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
 DEFAULT_MODEL = resolve_model("pr-review")
-API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
-API_KEY = os.environ.get("OPENCODE_API_KEY", "")
+API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
+API_KEY = os.environ.get("SKILLKIT_API_KEY", "")
 TIMEOUT = 600
 BATCH_SIZE = 4000
 CONSOLIDATION_GROUP_SIZE = 8
-PROGRESS_FILE = "/tmp/opencode/pr_review_progress.json"
+PROGRESS_FILE = "/tmp/skillkit/pr_review_progress.json"
 
 
 def log(msg: str) -> None:
@@ -77,7 +77,7 @@ def save_progress(phase: str, total_batches: int = 0, completed_batches: int = 0
 
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
-    api_model = os.environ.get("OPENCODE_MODEL", model)
+    api_model = os.environ.get("SKILLKIT_MODEL", model)
     payload = {
         "model": api_model,
         "stream": False,
@@ -87,8 +87,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
             {"role": "user", "content": user_msg},
         ],
     }
-    payload_path = "/tmp/opencode/pr_review_payload.json"
-    os.makedirs("/tmp/opencode", exist_ok=True)
+    payload_path = "/tmp/skillkit/pr_review_payload.json"
+    os.makedirs("/tmp/skillkit", exist_ok=True)
     with open(payload_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -590,7 +590,7 @@ def main():
             }
             partials.append(review)
 
-            partial_path = f"/tmp/opencode/review_partial_{i}.json"
+            partial_path = f"/tmp/skillkit/review_partial_{i}.json"
             with open(partial_path, "w", encoding="utf-8") as f:
                 json.dump(review, f, ensure_ascii=False)
 

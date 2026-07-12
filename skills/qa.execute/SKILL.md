@@ -14,7 +14,7 @@ Execute individual QA plans (infra, unit, flow, stress, scale) or plan suites se
 ## Architecture
 
 ```
-~/.claude/skills/qa.execute/
+$SKILLKIT_HOME/skills/qa.execute/
 ├── SKILL.md
 ├── run.py                    # Main orchestrator
 │                              #   - Parses plan (YAML between --- STEP)
@@ -50,9 +50,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('qa.execute')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -105,13 +105,13 @@ If multiple, ask user which to use. If only one, use it directly. Plans with `_c
 ## Step 5 — Copy and execute script
 
 ```bash
-rm -rf /tmp/opencode/qa_execute && cp -r ~/.claude/skills/qa.execute /tmp/opencode/qa_execute
+rm -rf /tmp/skillkit/qa_execute && cp -r $SKILLKIT_HOME/skills/qa.execute /tmp/skillkit/qa_execute
 ```
 
 ```bash
 QA_PLAN_FILE=/absolute/path/to/qa/{id}_plan.md \
 WORKDIR=<WORKDIR> \
-python3 /tmp/opencode/qa_execute/run.py
+python3 /tmp/skillkit/qa_execute/run.py
 ```
 
 `timeout=900000` (15 min).
@@ -162,7 +162,7 @@ For suite plans, rename all associated individual plans as well.
 
 ## Step 9 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -175,7 +175,7 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 ## Checkpoint & resume

@@ -55,9 +55,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('diagrams')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -100,10 +100,10 @@ Proceed? (y/n)
 ## Step 4 — Copy run.py and write context file
 
 ```bash
-cp "$HOME/.claude/skills/speckit.diagrams/run.py" /tmp/opencode/diagrams_run.py
+cp "$SKILLKIT_HOME/skills/speckit.diagrams/run.py" /tmp/skillkit/diagrams_run.py
 ```
 
-Write the artifacts to `/tmp/opencode/diagrams_context.json`:
+Write the artifacts to `/tmp/skillkit/diagrams_context.json`:
 
 ```json
 {
@@ -123,13 +123,13 @@ Include only artifacts that exist. Skip empty/missing ones.
 
 ```bash
 DIAGRAMS_MODE="prepare" \
-DIAGRAMS_CONTEXT_FILE="/tmp/opencode/diagrams_context.json" \
-python3 /tmp/opencode/diagrams_run.py
+DIAGRAMS_CONTEXT_FILE="/tmp/skillkit/diagrams_context.json" \
+python3 /tmp/skillkit/diagrams_run.py
 ```
 
 `timeout=120000` (2 minutes). run.py shows a spinner on stderr during the model call.
 
-Output is JSON on stdout with `project_type`, `summary`, and `diagrams[]`. The manifest is also saved to `/tmp/opencode/diagrams_manifest.json`.
+Output is JSON on stdout with `project_type`, `summary`, and `diagrams[]`. The manifest is also saved to `/tmp/skillkit/diagrams_manifest.json`.
 
 ## Step 6 — Present manifest and confirm
 
@@ -175,9 +175,9 @@ For each diagram in the selected manifest:
 DIAGRAMS_MODE="generate" \
 DIAGRAMS_CATEGORY="<category>" \
 DIAGRAMS_INSTANCE="<instance>" \
-DIAGRAMS_MANIFEST_FILE="/tmp/opencode/diagrams_manifest.json" \
-DIAGRAMS_CONTEXT_FILE="/tmp/opencode/diagrams_context.json" \
-python3 /tmp/opencode/diagrams_run.py
+DIAGRAMS_MANIFEST_FILE="/tmp/skillkit/diagrams_manifest.json" \
+DIAGRAMS_CONTEXT_FILE="/tmp/skillkit/diagrams_context.json" \
+python3 /tmp/skillkit/diagrams_run.py
 ```
 
 `timeout=300000` (5 minutes per diagram).
@@ -208,10 +208,10 @@ Just completed: sequence-auth.md ✅
 
 ### 7.4 — Checkpoint
 
-Each `run.py generate` call saves a checkpoint to `/tmp/opencode/diagrams_checkpoints/{category}_{instance}.json`. The orchestrator checks before calling run.py:
+Each `run.py generate` call saves a checkpoint to `/tmp/skillkit/diagrams_checkpoints/{category}_{instance}.json`. The orchestrator checks before calling run.py:
 
 - If checkpoint exists for `{category}_{instance}` and the user wants to skip → read from cache, show `⚡ Cache hit`
-- Progress is also tracked in `/tmp/opencode/diagrams_progress.json` with `phase`, `total`, `completed`, `current`, and timestamp
+- Progress is also tracked in `/tmp/skillkit/diagrams_progress.json` with `phase`, `total`, `completed`, `current`, and timestamp
 
 ## Step 8 — Final consolidation
 
@@ -265,7 +265,7 @@ specs/<feature>/diagrams/sequence-auth.md
 
 ## Step 10 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -278,14 +278,14 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/diagrams_progress.json` tracks `{"phase": "prepare|generate|done", "total": N, "completed": M, "current": "category_instance", "timestamp": "ISO8601"}`.
-- **Diagram checkpoints**: `/tmp/opencode/diagrams_checkpoints/{category}_{instance}.json` — one per generated diagram.
+- **Progress file**: `/tmp/skillkit/diagrams_progress.json` tracks `{"phase": "prepare|generate|done", "total": N, "completed": M, "current": "category_instance", "timestamp": "ISO8601"}`.
+- **Diagram checkpoints**: `/tmp/skillkit/diagrams_checkpoints/{category}_{instance}.json` — one per generated diagram.
 - **Resume**: Before phase 1, check progress. If `"phase": "done"` → skip to consolidation. If `"phase": "generate"` → resume from last completed diagram.
 - **Cache hit**: If checkpoint file exists and user confirms skip → read from cache instead of regenerating.
 
@@ -293,7 +293,7 @@ For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, o
 
 - **Model**: resolved via `resolve_model("diagrams")` according to TOKEN_BUDGET. Override with `DIAGRAMS_MODEL` env var.
 - **Timeouts**: Prepare = 120s, Generate = 300s per diagram.
-- **Payload via file**: run.py sends payloads via `/tmp/opencode/diagrams_payload.json` (avoids ARG_MAX).
+- **Payload via file**: run.py sends payloads via `/tmp/skillkit/diagrams_payload.json` (avoids ARG_MAX).
 - **Output directory**: `specs/<feature>/diagrams/`. Created if missing.
 - **Language**: All generated content (diagrams, prompts) must be in the user's language without accents or special characters.
 - **No placeholders**: Diagrams must use real entities from the artifacts.

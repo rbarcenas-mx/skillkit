@@ -31,7 +31,7 @@ Orchestrator (this agent)
   ├─ 6. For EACH batch — ONE atomic call, NEVER grouped:
   │     ├─ PR_BATCH_ONLY=N → run.py → JSON review
   │     ├─ Present result immediately
-  │     ├─ Save partial to /tmp/opencode/review_partial_N.json
+  │     ├─ Save partial to /tmp/skillkit/review_partial_N.json
   │     └─ Ask user to continue (required for multi-batch)
   ├─ 7. Consolidate: PR_CONSOLIDATE_DIR → run.py → merged review
   ├─ 8. Present consolidated review to user
@@ -57,9 +57,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('pr-review')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -140,7 +140,7 @@ If `.specify/memory/constitution.md` exists in the repo, read it to include as a
 Copy run.py once, then use it for all phases:
 
 ```bash
-cp "$HOME/.claude/skills/pr-review-expert/run.py" /tmp/opencode/pr_review_run.py
+cp "$SKILLKIT_HOME/skills/pr-review-expert/run.py" /tmp/skillkit/pr_review_run.py
 ```
 
 Get the batch list without processing:
@@ -148,7 +148,7 @@ Get the batch list without processing:
 ```bash
 PR_DIFF_FILE="/tmp/pr-<NUMBER>.diff" \
 PR_BATCH_ONLY="info" \
-python3 /tmp/opencode/pr_review_run.py
+python3 /tmp/skillkit/pr_review_run.py
 ```
 
 Shows total batches and each batch label. Use `timeout=30000` (30s — no model call, just parsing).
@@ -169,7 +169,7 @@ In both modes, every batch uses its own `bash` call with `PR_BATCH_ONLY=N`. The 
 ```bash
 PR_DIFF_FILE="/tmp/pr-<NUMBER>.diff" \
 PR_BATCH_ONLY="<N>" \
-python3 /tmp/opencode/pr_review_run.py
+python3 /tmp/skillkit/pr_review_run.py
 ```
 
 Use `timeout=300000` (5 min per batch — each batch has its own timeout).
@@ -177,7 +177,7 @@ Use `timeout=300000` (5 min per batch — each batch has its own timeout).
 ### 6.2 — After each batch:
 
 1. **Read the JSON output** immediately
-2. **Save partial** — run.py saves to `/tmp/opencode/review_partial_N.json` automatically
+2. **Save partial** — run.py saves to `/tmp/skillkit/review_partial_N.json` automatically
 3. **Present result** to user: batch label, verdict, any critical findings
 4. **Show progress**: `Batch N/M completed`
 5. If mode A: **Ask user** "Continue with next batch?"
@@ -189,8 +189,8 @@ After all batches are complete, run hierarchical consolidation:
 
 ```bash
 PR_DIFF_FILE="/tmp/pr-<NUMBER>.diff" \
-PR_CONSOLIDATE_DIR="/tmp/opencode" \
-python3 /tmp/opencode/pr_review_run.py
+PR_CONSOLIDATE_DIR="/tmp/skillkit" \
+python3 /tmp/skillkit/pr_review_run.py
 ```
 
 Use `timeout=300000` (5 min for consolidation with model calls).
@@ -274,7 +274,7 @@ Verdict: REQUEST_CHANGES
 
 ## Step 9 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -287,15 +287,15 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/pr_review_progress.json` tracks `{"phase": "census|batches|consolidate|done", "total_batches": N, "completed_batches": N, "timestamp": "ISO8601"}`.
-- **Batch partials**: `/tmp/opencode/review_partial_<N>.json` — saved by run.py after each atomic batch call.
-- **Resume**: If interrupted, check `/tmp/opencode/review_partial_*.json` count. Already-completed batches are skipped by starting `PR_BATCH_ONLY` from the next uncompleted index. On restart, re-run census first, then resume from the first missing partial.
+- **Progress file**: `/tmp/skillkit/pr_review_progress.json` tracks `{"phase": "census|batches|consolidate|done", "total_batches": N, "completed_batches": N, "timestamp": "ISO8601"}`.
+- **Batch partials**: `/tmp/skillkit/review_partial_<N>.json` — saved by run.py after each atomic batch call.
+- **Resume**: If interrupted, check `/tmp/skillkit/review_partial_*.json` count. Already-completed batches are skipped by starting `PR_BATCH_ONLY` from the next uncompleted index. On restart, re-run census first, then resume from the first missing partial.
 
 ## Notes
 
@@ -304,8 +304,8 @@ For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, o
 - **Per-batch timeout**: `300000` (5 min) per batch. Each call has its own independent timeout — never use a single high timeout for all batches.
 - **Consolidation timeout**: `300000` (5 min) for `PR_CONSOLIDATE_DIR` mode.
 - **GOLDEN RULE — NEVER group batches**: The orchestrator must process each batch via `PR_BATCH_ONLY=N` in separate bash calls. A single `run.py` call without `PR_BATCH_ONLY` (full mode) is ONLY acceptable when the diff produces exactly 1 batch. For multi-batch diffs, the full mode is forbidden because a timeout would lose all partial progress.
-- **Resume**: If interrupted, check `/tmp/opencode/review_partial_*.json` to skip already-completed batches via `PR_BATCH_ONLY`.
+- **Resume**: If interrupted, check `/tmp/skillkit/review_partial_*.json` to skip already-completed batches via `PR_BATCH_ONLY`.
 - **No here-documents**: Always Write + Bash separately.
-- **Payload via file**: run.py writes payload to `/tmp/opencode/pr_review_payload.json`.
+- **Payload via file**: run.py writes payload to `/tmp/skillkit/pr_review_payload.json`.
 - **Credentials**: If using Jira/Linear, pass credentials via stdin (`curl -K -`), never in argv.
 - **Language**: All generated content (PR reports, model prompts, findings) must be in the user's language without accents or special characters.

@@ -14,7 +14,7 @@ Analyze the current project state and generate QA validation plans per type. The
 ## Architecture
 
 ```
-~/.claude/skills/qa.prepare/
+$SKILLKIT_HOME/skills/qa.prepare/
 ├── SKILL.md
 ├── run.py                    # Plan generator
 │                              #   - Reads QA_PLAN_TYPES from environment
@@ -57,9 +57,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('qa.prepare')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -176,13 +176,13 @@ find tests/ -name '*.test.*' -o -name '*.spec.*' 2>/dev/null | sort || echo "NO_
 cat .gitignore 2>/dev/null || echo "NO_GITIGNORE"
 ```
 
-Save output as `/tmp/opencode/qa_prepare_payload.json`.
+Save output as `/tmp/skillkit/qa_prepare_payload.json`.
 
 ## Step 6 — Execute run.py
 
 ```bash
-cp -r ~/.claude/skills/qa.prepare /tmp/opencode/qa_prepare && \
-QA_PROJECT_CONTEXT="$(cat /tmp/opencode/qa_prepare_payload.json)" \
+cp -r $SKILLKIT_HOME/skills/qa.prepare /tmp/skillkit/qa_prepare && \
+QA_PROJECT_CONTEXT="$(cat /tmp/skillkit/qa_prepare_payload.json)" \
 WORKDIR="<WORKDIR>" \
 QA_EXISTING_PLANS="$(ls qa/*_plan.md 2>/dev/null || echo '')" \
 QA_PLAN_TYPES="<selected types>" \
@@ -194,7 +194,7 @@ QA_FLOW_VERIFICACION="<automatica|manual>" \
 QA_FLOW_ADMIN_EXISTS="<si|no>" \
 QA_FLOW_DENUNCIAS="<si|no>" \
 QA_FLOW_ADMIN_ENDPOINTS="<si|no>" \
-python3 /tmp/opencode/qa_prepare/run.py
+python3 /tmp/skillkit/qa_prepare/run.py
 ```
 
 `timeout=660000` (11 min per plan generated — each plan takes ~2min).
@@ -259,7 +259,7 @@ Ask if the user wants to review any plan, modify it, or proceed to execute with 
 
 ## Step 10 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -272,14 +272,14 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/qa_prepare_progress.json` tracks per-type status `{"infra": "done", "flow": "running", ...}`.
-- **Cache per type**: `/tmp/opencode/qa_prepare_{type}_cached.md` — saves generated plan text to avoid re-generation.
+- **Progress file**: `/tmp/skillkit/qa_prepare_progress.json` tracks per-type status `{"infra": "done", "flow": "running", ...}`.
+- **Cache per type**: `/tmp/skillkit/qa_prepare_{type}_cached.md` — saves generated plan text to avoid re-generation.
 - **Resume**: On restart, progress file is checked. Types marked "done" load from cache. Types marked "running" are re-generated.
 
 ## Notes
@@ -287,7 +287,7 @@ For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, o
 - **Language**: All generated content must be in the user's language without accents or special characters
 - **Model**: resolved via `resolve_model("qa.prepare")` according to TOKEN_BUDGET
 - **Timeout**: `660000` (11 min) per execution
-- **Cache per type**: `/tmp/opencode/qa_prepare_progress.json` with per-type keys
+- **Cache per type**: `/tmp/skillkit/qa_prepare_progress.json` with per-type keys
 - **Validation**: YAML parser + structural checks. On failure, auto-regenerate with correction prompt
 - **Step format**: `--- STEP` YAML, compatible with `qa.execute`
 - **Suite**: auto-generated if 2+ plan types selected

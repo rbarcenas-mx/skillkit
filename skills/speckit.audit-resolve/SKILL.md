@@ -48,9 +48,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('audit.resolve_spec')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -96,9 +96,9 @@ Proceed? (y/n)
 ## Step 4 — Diagnose (run.py MODE=diagnose)
 
 ```bash
-cp "$HOME/.claude/skills/speckit.audit-resolve/run.py" /tmp/opencode/audit_resolve_run.py
+cp "$SKILLKIT_HOME/skills/speckit.audit-resolve/run.py" /tmp/skillkit/audit_resolve_run.py
 
-AUDIT_WORKDIR="$WORKDIR" python3 /tmp/opencode/audit_resolve_run.py
+AUDIT_WORKDIR="$WORKDIR" python3 /tmp/skillkit/audit_resolve_run.py
 ```
 
 Default mode is `diagnose`. Output JSON with `status`, `resolve_path`, `total_findings`, `audit_id`, `stages`.
@@ -145,10 +145,10 @@ import sys, os
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('audit.resolve_spec')
-print('Mode:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
-print('Model:', os.environ.get('OPENCODE_MODEL', '?'))
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
-print('Description:', os.environ.get('OPENCODE_MODEL_DESC', '?'))
+print('Mode:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
+print('Model:', os.environ.get('SKILLKIT_MODEL', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
+print('Description:', os.environ.get('SKILLKIT_MODEL_DESC', '?'))
 "
 
 # For code:
@@ -157,10 +157,10 @@ import sys, os
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('audit.resolve_codigo')
-print('Mode:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
-print('Model:', os.environ.get('OPENCODE_MODEL', '?'))
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
-print('Description:', os.environ.get('OPENCODE_MODEL_DESC', '?'))
+print('Mode:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
+print('Model:', os.environ.get('SKILLKIT_MODEL', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
+print('Description:', os.environ.get('SKILLKIT_MODEL_DESC', '?'))
 "
 ```
 
@@ -173,7 +173,7 @@ Display per-stage banner:
 ║                                                             ║
 ║  TOKEN_BUDGET:   <low|medium|high>                          ║
 ║  Model:          <model_id>                                 ║
-║  Provider:       <proveedor>                                ║
+║  Provider:       <provider>                                ║
 ║                                                             ║
 ║  Why this model:                                            ║
 ║  <Reason why it is the best model in its mode>              ║
@@ -209,7 +209,7 @@ AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_RESOLVE_MODE=resolve_stage \
 AUDIT_RESOLVE_STAGE="<stage>" \
 AUDIT_RESOLVE_ACTION=solve \
-python3 /tmp/opencode/audit_resolve_run.py
+python3 /tmp/skillkit/audit_resolve_run.py
 ```
 
 If no → skip stage (findings remain unresolved for this stage).
@@ -235,7 +235,7 @@ If the user chose Option A (auto-resolve):
 AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_RESOLVE_MODE=resolve \
 AUDIT_RESOLVE_ACTION=solve \
-python3 /tmp/opencode/audit_resolve_run.py
+python3 /tmp/skillkit/audit_resolve_run.py
 ```
 
 After completion, proceed directly to Step 7.
@@ -245,7 +245,7 @@ After completion, proceed directly to Step 7.
 ```bash
 AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_RESOLVE_MODE=finalize \
-python3 /tmp/opencode/audit_resolve_run.py
+python3 /tmp/skillkit/audit_resolve_run.py
 ```
 
 Verifies `**Solucion**: <ts>` with ts strictly > mtime of all referenced files. Returns JSON with status and verified timestamp.
@@ -265,7 +265,7 @@ Verifies `**Solucion**: <ts>` with ts strictly > mtime of all referenced files. 
 
 ## Step 9 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -278,12 +278,12 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 ## Checkpoint & resume
 
-- **Progress**: `/tmp/opencode/audit_resolve_progress.json` tracks `stage_name`, `finding_index`, `completed_stages`, `completed_findings`
+- **Progress**: `/tmp/skillkit/audit_resolve_progress.json` tracks `stage_name`, `finding_index`, `completed_stages`, `completed_findings`
 - **Resume**: On restart, completed findings are skipped from progress file
 
 ## Notes

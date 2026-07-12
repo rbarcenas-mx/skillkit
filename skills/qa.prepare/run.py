@@ -37,11 +37,11 @@ QA_FLOW_ADMIN_ENDPOINTS = os.environ.get('QA_FLOW_ADMIN_ENDPOINTS', 'si')
 SKILL_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def print_model_banner(task_desc):
-    mode_raw = os.environ.get("OPENCODE_MODO", "?")
+    mode_raw = os.environ.get("SKILLKIT_MODE", "?")
     mode_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(mode_raw, mode_raw)
-    model = os.environ.get("OPENCODE_MODEL", "?")
-    provider = os.environ.get("OPENCODE_PROVEEDOR", "?")
-    desc = os.environ.get("OPENCODE_MODEL_DESC", "")
+    model = os.environ.get("SKILLKIT_MODEL", "?")
+    provider = os.environ.get("SKILLKIT_PROVIDER", "?")
+    desc = os.environ.get("SKILLKIT_MODEL_DESC", "")
     sys.stderr.write(f"\n{'='*54}\n")
     sys.stderr.write(f"  Model Router\n")
     sys.stderr.write(f"{'-'*54}\n")
@@ -52,8 +52,8 @@ def print_model_banner(task_desc):
     sys.stderr.write(f"{'='*54}\n\n")
 
 TEMPLATES_DIR = os.path.join(SKILL_DIR, 'templates')
-PROGRESS_FILE = '/tmp/opencode/qa_prepare_progress.json'
-os.makedirs('/tmp/opencode', exist_ok=True)
+PROGRESS_FILE = '/tmp/skillkit/qa_prepare_progress.json'
+os.makedirs('/tmp/skillkit', exist_ok=True)
 
 STRESS_CONFIG = {
     'ligero': {'n': 100, 'c': 10, 'p95': 300, 'rate': 99},
@@ -88,21 +88,15 @@ def spinner_while_waiting(stop_event, label="Processing"):
     sys.stderr.flush()
 
 def get_api_key():
-    auth_path = os.path.expanduser("~/.local/share/opencode/auth.json")
-    try:
-        with open(auth_path) as f:
-            auth = json.load(f)
-        return auth.get("opencode-go", {}).get("key", "")
-    except (FileNotFoundError, json.JSONDecodeError):
-        return os.environ.get("OPENCODE_API_KEY", "")
+    return os.environ.get("SKILLKIT_API_KEY", "")
 
 def call_model(system_prompt, user_message):
-    model = os.environ.get("OPENCODE_MODEL")
+    model = os.environ.get("SKILLKIT_MODEL")
     if not model:
         resolve_model("qa.prepare")
-        model = os.environ.get("OPENCODE_MODEL", "")
-    provider = os.environ.get("OPENCODE_PROVEEDOR", "ollama")
-    api_url = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+        model = os.environ.get("SKILLKIT_MODEL", "")
+    provider = os.environ.get("SKILLKIT_PROVIDER", "ollama")
+    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 
     if not api_url.endswith("/chat/completions"):
         api_url = api_url.rstrip("/") + "/chat/completions"
@@ -117,7 +111,7 @@ def call_model(system_prompt, user_message):
             {"role": "user", "content": user_message}
         ]
     }
-    payload_path = '/tmp/opencode/qa_prepare_payload.json'
+    payload_path = '/tmp/skillkit/qa_prepare_payload.json'
     with open(payload_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -966,7 +960,7 @@ def main():
 
         p = progress if isinstance(progress, dict) else {}
         if p.get(plan_type) == "done":
-            cache_file = f'/tmp/opencode/qa_prepare_{plan_type}_cached.md'
+            cache_file = f'/tmp/skillkit/qa_prepare_{plan_type}_cached.md'
             if os.path.exists(cache_file):
                 print(f"  Cache found for '{plan_type}' — skipping AI generation, writing from cache", file=sys.stderr)
                 with open(cache_file, 'r', encoding='utf-8') as f:
@@ -998,7 +992,7 @@ def main():
             save_progress(plan_type, "failed")
             continue
 
-        cache_file = f'/tmp/opencode/qa_prepare_{plan_type}_cached.md'
+        cache_file = f'/tmp/skillkit/qa_prepare_{plan_type}_cached.md'
         with open(cache_file, 'w', encoding='utf-8') as f:
             f.write(plan)
         save_progress(plan_type, "done")
@@ -1025,11 +1019,11 @@ def main():
         print(f"Suite saved: {suite_path}", file=sys.stderr)
 
     n = len(generated)
-    modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(os.environ.get("OPENCODE_MODO"), "?")
+    modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(os.environ.get("SKILLKIT_MODE"), "?")
 
     remote_input = 2500 + 500 + 1000 + 2000 + 500
     local_input = n * 1200
-    local_think = n * 6000 if "deepseek-r1" in os.environ.get("OPENCODE_MODEL", "") else 0
+    local_think = n * 6000 if "deepseek-r1" in os.environ.get("SKILLKIT_MODEL", "") else 0
     local_output = n * 2000
 
     print(f"\n{'='*54}", file=sys.stderr)
@@ -1042,7 +1036,7 @@ def main():
         print(f"  Suite generated: yes ({suite_name})", file=sys.stderr)
     print(f"{'-'*54}", file=sys.stderr)
     print(f"  Model Router: {modo_label}", file=sys.stderr)
-    print(f"  Model: {os.environ.get('OPENCODE_MODEL', '?')} ({os.environ.get('OPENCODE_PROVEEDOR', '?')})", file=sys.stderr)
+    print(f"  Model: {os.environ.get('SKILLKIT_MODEL', '?')} ({os.environ.get('SKILLKIT_PROVIDER', '?')})", file=sys.stderr)
     print(file=sys.stderr)
     print(f"  {'Source':<30} {'Tokens est.':>12} {'Cost':>8}", file=sys.stderr)
     print(f"  {'-'*52}", file=sys.stderr)

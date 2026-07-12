@@ -70,7 +70,7 @@ Example:
 
 ```
 WARNING: TOKEN_BUDGET=low -> 'gemma4:26b' not found in Ollama
-  Falling back to medium: opencode-go/deepseek-v4-flash
+  Falling back to medium: deepseek-v4-flash
   Skill: ci.prepare -- proceeding with fallback model
 ```
 
@@ -89,6 +89,8 @@ git clone https://github.com/rbarcenas-mx/skillkit.git ~/skillkit
 cd ~/skillkit
 ./install.sh
 ```
+
+`install.sh` is agent-agnostic: it creates `~/.config/skillkit/`, and symlinks skills/commands into any supported agent directory it finds (Claude, opencode, etc.).
 
 Or manual:
 
@@ -140,10 +142,89 @@ Every skill calls `resolve_model(skill_name)` which:
 1. Reads `TOKEN_BUDGET` (`low` | `medium` | `high`)
 2. Looks up the skill in `lib/models.json` into `skill_mapping`
 3. Returns the right model for that budget level
-4. Sets `OPENCODE_MODEL`, `OPENCODE_PROVEEDOR`, `OPENCODE_API_URL` automatically
+4. Sets `SKILLKIT_MODEL`, `SKILLKIT_PROVIDER`, `SKILLKIT_API_URL`, `SKILLKIT_API_KEY` automatically
 5. **If unavailable**: degrades gracefully -- warns, falls back, never crashes
 
-Configure your own mapping by editing `lib/models.json`.
+Configure your own mapping by editing `lib/models.json`. Add or remove providers and models as needed -- the engine is provider-agnostic.
+
+### Provider configuration
+
+Remote provider URLs and API keys are configured in `lib/models.json` (`providers`) and can be overridden per-user in `~/.config/skillkit/config.json`.
+
+SkillKit reads keys from environment variables by default. The stock `lib/models.json` expects:
+
+| Provider | Env var |
+|---|---|
+| `deepseek` | `DEEPSEEK_API_KEY` |
+| `opencode-go` | `OPENCODE_API_KEY` |
+| `anthropic` | `ANTHROPIC_API_KEY` |
+
+Example `.bashrc`:
+
+```bash
+export DEEPSEEK_API_KEY="sk-..."
+export OPENCODE_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Or use a per-user config file (`~/.config/skillkit/config.json`):
+
+```json
+{
+  "providers": {
+    "deepseek": {
+      "api_key": "sk-..."
+    },
+    "opencode-go": {
+      "api_key": "sk-..."
+    }
+  }
+}
+```
+
+Set `SKILLKIT_CONFIG_FILE` to use a different config path.
+
+### Adding a new provider (V1.0)
+
+SkillKit V1.0 supports **OpenAI-compatible** providers only. Add the provider to `lib/models.json` → `providers`, then reference it from a model:
+
+```json
+{
+  "providers": {
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key": "{env:OPENROUTER_API_KEY}"
+    }
+  },
+  "models": [
+    {
+      "id": "openrouter/anthropic/claude-sonnet-4",
+      "provider": "openrouter",
+      "api_model": "anthropic/claude-sonnet-4",
+      "description": "Claude Sonnet 4 via OpenRouter",
+      "speed": "medium",
+      "token_cost": "medium"
+    }
+  ]
+}
+```
+
+The environment variable name is up to you — just match it in `{env:YOUR_NAME}`. Then assign the model ID to any skill in `skill_mapping`.
+
+**Note:** the stock `run.py` executors use the OpenAI chat-completions format (`/chat/completions`, `Authorization: Bearer`, `choices[0].message.content`). Providers that are not OpenAI-compatible need a custom driver in the skill or an OpenAI-compatible proxy.
+
+For non-OpenAI providers (e.g. Anthropic, Gemini), run a local OpenAI-compatible proxy such as [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) and point SkillKit at it.
+
+### Security notes
+
+- API keys are **never printed** by the engine or the skills.
+- Keys are passed to `curl` via a temporary config file (`-K /tmp/skillkit/skillkit_headers.conf`), never as command-line arguments, so they do not appear in `ps`.
+- If you store keys in `~/.config/skillkit/config.json`, restrict its permissions: `chmod 600 ~/.config/skillkit/config.json`.
+- The temporary header file is overwritten on each run but is not automatically deleted. On shared machines, consider adding `rm /tmp/skillkit/skillkit_headers.conf` after the skill finishes, or use an in-memory secret manager.
+
+### Configurable fallback
+
+If the model for the requested `TOKEN_BUDGET` is unavailable, the engine follows the `fallback_chain` defined in `lib/models.json` (`config.fallback_chain`). The user controls the order; opencode-go is just one provider among many, not a hardcoded default.
 
 ## Directory structure
 

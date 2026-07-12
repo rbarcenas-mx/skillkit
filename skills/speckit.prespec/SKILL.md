@@ -45,9 +45,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('prespec')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -95,7 +95,7 @@ If none found, ask the user to provide the idea.
 ### 5.1 — Copy run.py
 
 ```bash
-cp "$HOME/.claude/skills/speckit.prespec/run.py" /tmp/opencode/prespec_run.py
+cp "$SKILLKIT_HOME/skills/speckit.prespec/run.py" /tmp/skillkit/prespec_run.py
 ```
 
 Say: `▶ Copying runner... done`
@@ -109,7 +109,7 @@ Then execute:
 ```bash
 WORKDIR="$WORKDIR" \
 IDEA_FILE="<path to idea file>" \
-python3 /tmp/opencode/prespec_run.py
+python3 /tmp/skillkit/prespec_run.py
 ```
 
 Or with direct text:
@@ -117,7 +117,7 @@ Or with direct text:
 ```bash
 WORKDIR="$WORKDIR" \
 IDEA_TEXT="<idea text>" \
-python3 /tmp/opencode/prespec_run.py
+python3 /tmp/skillkit/prespec_run.py
 ```
 
 Use `timeout=660000` (11 min).
@@ -129,7 +129,7 @@ After execution completes, say: `✓ Phase 1 complete — processing response...
 2. Sends it to the model (resolved via `resolve_model("prespec")`) with the analysis system prompt
 3. Shows a spinner with elapsed time on stderr while waiting for the model
 4. Writes `idea.md` to WORKDIR
-5. Saves checkpoint to `/tmp/opencode/prespec_progress.json`
+5. Saves checkpoint to `/tmp/skillkit/prespec_progress.json`
 6. Returns JSON to stdout: `status`, `output_file`, `ambiguities`, `missing_pieces`, `questions_count`, `questions[]`
 
 ### 5.3 — Parse and present results
@@ -157,14 +157,14 @@ Say (in the user's language): `▶ Phase 2 — Refinement (incorporating decisio
 
 First write the existing idea.md to a temp file to avoid env var size limits:
 
-Write the content to `/tmp/opencode/prespec_existing_doc.md`, then:
+Write the content to `/tmp/skillkit/prespec_existing_doc.md`, then:
 
 ```bash
 WORKDIR="$WORKDIR" \
 PRESPEC_REFINE="true" \
-EXISTING_DOC_FILE="/tmp/opencode/prespec_existing_doc.md" \
+EXISTING_DOC_FILE="/tmp/skillkit/prespec_existing_doc.md" \
 USER_DECISIONS="<user decisions>" \
-python3 /tmp/opencode/prespec_run.py
+python3 /tmp/skillkit/prespec_run.py
 ```
 
 Use `timeout=660000` (11 min).
@@ -192,7 +192,7 @@ Checkpoint: if the process is interrupted, re-running phase 1 regenerates `idea.
 
 ## Step 9 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -205,16 +205,16 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output. If only phase 1 ran (no user decisions), omit phase 2 row.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output. If only phase 1 ran (no user decisions), omit phase 2 row.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/prespec_progress.json` tracks `{"phase": 1|2, "status": "starting|running|done|failed", "timestamp": "ISO8601"}`.
+- **Progress file**: `/tmp/skillkit/prespec_progress.json` tracks `{"phase": 1|2, "status": "starting|running|done|failed", "timestamp": "ISO8601"}`.
 - **Phase 1**: single-shot — if interrupted, re-run; `idea.md` is overwritten. The progress file indicates whether phase 1 completed.
 - **Phase 2**: single-shot — if interrupted, re-run with same `EXISTING_DOC_FILE` and `USER_DECISIONS`; safe to redo. Check the progress file to know if phase 2 already ran.
-- **Resume**: before executing phase 1, check if `/tmp/opencode/prespec_progress.json` shows `"phase": 1, "status": "done"` — skip to phase 2 (questions display). Before phase 2, check for `"phase": 2, "status": "done"` — skip to end.
+- **Resume**: before executing phase 1, check if `/tmp/skillkit/prespec_progress.json` shows `"phase": 1, "status": "done"` — skip to phase 2 (questions display). Before phase 2, check for `"phase": 2, "status": "done"` — skip to end.
 
 ## Notes
 

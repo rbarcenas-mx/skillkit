@@ -57,9 +57,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('ci.ship')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -144,7 +144,7 @@ For team mode, ask branch name. Save to `ci.config.json`.
 ## Step 5 — Detect checkpoint
 
 ```bash
-cat /tmp/opencode/ci_ship_progress.json 2>/dev/null || echo '{"found": false}'
+cat /tmp/skillkit/ci_ship_progress.json 2>/dev/null || echo '{"found": false}'
 ```
 
 Show user which phases are complete and which are pending.
@@ -152,11 +152,11 @@ Show user which phases are complete and which are pending.
 ## Step 6 — Pre-flight: lint, build, tests
 
 ```bash
-cp "$HOME/.claude/skills/ci.ship/run.py" /tmp/opencode/ci_ship_run.py
+cp "$SKILLKIT_HOME/skills/ci.ship/run.py" /tmp/skillkit/ci_ship_run.py
 ```
 
 ```bash
-CI_MODE=preflight WORKDIR="$WORKDIR" python3 /tmp/opencode/ci_ship_run.py
+CI_MODE=preflight WORKDIR="$WORKDIR" python3 /tmp/skillkit/ci_ship_run.py
 ```
 
 `timeout=300000` (5 min). Presents results and asks user on failure.
@@ -183,7 +183,7 @@ If accepted: obtain diff, run batch-by-batch review via `pr-review-expert/run.py
 Confirm with user, then:
 
 ```bash
-CI_MODE=push WORKDIR="$WORKDIR" python3 /tmp/opencode/ci_ship_run.py
+CI_MODE=push WORKDIR="$WORKDIR" python3 /tmp/skillkit/ci_ship_run.py
 ```
 
 `timeout=120000` (2 min). Present result.
@@ -193,7 +193,7 @@ CI_MODE=push WORKDIR="$WORKDIR" python3 /tmp/opencode/ci_ship_run.py
 Ask user, then optionally:
 
 ```bash
-CI_MODE=ci-wait WORKDIR="$WORKDIR" python3 /tmp/opencode/ci_ship_run.py
+CI_MODE=ci-wait WORKDIR="$WORKDIR" python3 /tmp/skillkit/ci_ship_run.py
 ```
 
 `timeout=300000` (5 min). Present CI result.
@@ -220,7 +220,7 @@ If CI was successful and a `ci/*_tasks.md` file without `_completed` exists:
 
 ## Step 13 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -233,12 +233,12 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 ## Checkpoint & resume
 
-- **Progress**: `/tmp/opencode/ci_ship_progress.json` tracks `preflight`, `review`, `push`, `ci_wait` phases
+- **Progress**: `/tmp/skillkit/ci_ship_progress.json` tracks `preflight`, `review`, `push`, `ci_wait` phases
 - **Resume**: on restart, check progress and resume from last incomplete phase
 
 ## Notes

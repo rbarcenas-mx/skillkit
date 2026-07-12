@@ -55,9 +55,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('ci.execute')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -112,7 +112,7 @@ Present task list summary and ask user to confirm.
 ## Step 4 — Detect checkpoint and resume state
 
 ```bash
-cat /tmp/opencode/ci_execute_progress.json 2>/dev/null || echo '{"found": false}'
+cat /tmp/skillkit/ci_execute_progress.json 2>/dev/null || echo '{"found": false}'
 ```
 
 If a checkpoint exists:
@@ -132,7 +132,7 @@ If no checkpoint but the Execution Log has entries, compute completed count from
 ### 5.1 — Copy
 
 ```bash
-cp "$HOME/.claude/skills/ci.execute/run.py" /tmp/opencode/ci_execute_run.py
+cp "$SKILLKIT_HOME/skills/ci.execute/run.py" /tmp/skillkit/ci_execute_run.py
 ```
 
 ### 5.2 — Execute
@@ -140,7 +140,7 @@ cp "$HOME/.claude/skills/ci.execute/run.py" /tmp/opencode/ci_execute_run.py
 ```bash
 CI_TASKS_FILE="<absolute path to ci/{id}_tasks.md>" \
 WORKDIR="$WORKDIR" \
-python3 /tmp/opencode/ci_execute_run.py
+python3 /tmp/skillkit/ci_execute_run.py
 ```
 
 Use `timeout=900000` (15 min).
@@ -154,7 +154,7 @@ Use `timeout=900000` (15 min).
 - Displays each command before executing, asks for user confirmation (stdin)
 - Executes commands via `subprocess`
 - Captures short commit hash after each `git commit`
-- Saves checkpoint to `/tmp/opencode/ci_execute_progress.json` after each task
+- Saves checkpoint to `/tmp/skillkit/ci_execute_progress.json` after each task
 - Updates execution log in the plan file with timestamp, status, duration, and hash
 - If a task fails: logs error, shows to user, allows retry
 - If a task contains `git push`, requires explicit confirmation before executing
@@ -187,7 +187,7 @@ If tasks failed, ask the user:
 
 ## Step 7 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -200,13 +200,13 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output. `run.py` does not call models — all execution is subprocess / shell commands.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output. `run.py` does not call models — all execution is subprocess / shell commands.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/ci_execute_progress.json`
+- **Progress file**: `/tmp/skillkit/ci_execute_progress.json`
 - **Per-task checkpoint**: Each completed task is immediately written to the Execution Log in the plan file with ✅ status.
 - **Resume mechanism**: When `run.py` starts, it reads the Execution Log. Tasks already marked ✅ are skipped. Tasks without entries (or marked ❌) are executed.
 - **If power loss / interruption**: Re-run `ci.execute` — `run.py` detects completed tasks and resumes from the first pending one.

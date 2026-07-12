@@ -27,54 +27,44 @@ def _resolve_budget(budget):
     try:
         cat = _load_models()
         if cat:
-            dft = cat.get("config", {}).get("modo", "low")
+            dft = cat.get("config", {}).get("mode", "low")
             return {"ahorro_alto": "low", "ahorro_balanceado": "medium", "ahorro_bajo": "high"}.get(dft, dft)
     except Exception:
         pass
     return "low"
 
 
-def _set_api_env(proveedor: str, via_opencode_go: bool = False) -> bool:
-    if via_opencode_go:
-        os.environ["OPENCODE_API_URL"] = "https://opencode.ai/zen/go/v1"
-        return _set_opencode_go_key()
-
-    cfg_path = os.path.expanduser("~/.config/opencode/opencode.json")
+def _load_user_config(catalog):
+    default_path = os.path.expanduser("~/.config/skillkit/config.json")
+    config_path = os.environ.get("SKILLKIT_CONFIG_FILE") or catalog.get("config", {}).get("config_file", default_path)
+    config_path = os.path.expanduser(config_path)
     try:
-        with open(cfg_path) as f:
-            cfg = json.load(f)
+        with open(config_path) as f:
+            return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        cfg = {}
-    prov_cfg = cfg.get("provider", {}).get(proveedor, {})
-
-    if prov_cfg:
-        os.environ["OPENCODE_API_URL"] = prov_cfg.get("options", {}).get("baseURL", "")
-        api_key_raw = prov_cfg.get("options", {}).get("apiKey", "")
-        if api_key_raw and api_key_raw.startswith("{env:"):
-            env_var = api_key_raw[5:-1]
-            api_key_raw = os.environ.get(env_var, "")
-        os.environ["OPENCODE_API_KEY"] = api_key_raw
-        return bool(api_key_raw)
-    elif proveedor and proveedor != "ollama":
-        os.environ["OPENCODE_API_URL"] = "https://opencode.ai/zen/go/v1"
-        return _set_opencode_go_key()
-    else:
-        os.environ["OPENCODE_API_URL"] = ""
-        os.environ["OPENCODE_API_KEY"] = ""
-        return True  # ollama doesn't need API key
+        return {}
 
 
-def _set_opencode_go_key() -> bool:
-    auth_path = os.path.expanduser("~/.local/share/opencode/auth.json")
-    try:
-        with open(auth_path) as f:
-            auth = json.load(f)
-        key = auth.get("opencode-go", {}).get("key", "")
-        os.environ["OPENCODE_API_KEY"] = key
-        return bool(key)
-    except (FileNotFoundError, json.JSONDecodeError):
-        os.environ["OPENCODE_API_KEY"] = ""
-        return False
+def _get_provider_config(catalog, user_config, provider_name):
+    base = catalog.get("providers", {}).get(provider_name, {})
+    override = user_config.get("providers", {}).get(provider_name, {})
+    merged = dict(base)
+    merged.update({k: v for k, v in override.items() if v is not None})
+    return merged
+
+
+def _resolve_api_key(value):
+    if value and value.startswith("{env:") and value.endswith("}"):
+        return os.environ.get(value[5:-1], "")
+    return value or ""
+
+
+def _set_api_env(provider_cfg):
+    url = provider_cfg.get("base_url", "")
+    key = _resolve_api_key(provider_cfg.get("api_key", ""))
+    os.environ["SKILLKIT_API_URL"] = url
+    os.environ["SKILLKIT_API_KEY"] = key
+    return bool(url)
 
 
 def _ollama_models_available():
@@ -91,43 +81,48 @@ def _ollama_models_available():
         return []
 
 
-def _model_available(model_id: str, info: dict) -> bool:
-    proveedor = info.get("proveedor", "")
-    if proveedor == "ollama":
+def _model_available(model_id, info, catalog, user_config):
+    provider = info.get("provider", "")
+    if provider == "ollama":
         return model_id in _ollama_models_available()
-    via_go = model_id.startswith("opencode-go/")
-    return _set_api_env(proveedor, via_opencode_go=via_go)
+    provider_cfg = _get_provider_config(catalog, user_config, provider)
+    _set_api_env(provider_cfg)
+    url = os.environ.get("SKILLKIT_API_URL", "")
+    key = os.environ.get("SKILLKIT_API_KEY", "")
+    if not url:
+        return False
+    # If the provider config explicitly lists an api_key, it must resolve to a non-empty value.
+    # An explicit empty api_key means "no auth required".
+    if "api_key" in provider_cfg and not key:
+        return False
+    return True
 
 
-def _activate_model(model_id: str, info: dict, budget_real: str) -> str:
-    proveedor = info.get("proveedor", "")
-    via_go = model_id.startswith("opencode-go/")
-    api_model = model_id.replace("opencode-go/", "") if via_go else model_id
+def _activate_model(model_id, info, budget_real, catalog, user_config):
+    provider = info.get("provider", "")
+    provider_cfg = _get_provider_config(catalog, user_config, provider)
+    api_model = info.get("api_model", model_id)
 
-    os.environ["OPENCODE_MODEL"] = api_model
-    os.environ["OPENCODE_MODEL_DESC"] = info.get("descripcion", "")
-    os.environ["OPENCODE_MODO"] = budget_real
-    os.environ["OPENCODE_PROVEEDOR"] = proveedor
+    os.environ["SKILLKIT_MODEL"] = api_model
+    os.environ["SKILLKIT_MODEL_DESC"] = info.get("description", "")
+    os.environ["SKILLKIT_MODE"] = budget_real
+    os.environ["SKILLKIT_PROVIDER"] = provider
 
-    if not via_go:
-        _set_api_env(proveedor, via_opencode_go=False)
+    _set_api_env(provider_cfg)
 
     headroom_url = os.environ.get("HEADROOM_PROXY_URL", "")
-    if headroom_url and proveedor and proveedor != "ollama":
-        os.environ["HEADROOM_UPSTREAM_URL"] = os.environ.get("OPENCODE_API_URL", "")
-        os.environ["OPENCODE_API_URL"] = headroom_url
+    if headroom_url and provider and provider != "ollama":
+        os.environ["HEADROOM_UPSTREAM_URL"] = os.environ.get("SKILLKIT_API_URL", "")
+        os.environ["SKILLKIT_API_URL"] = headroom_url
 
     return model_id
 
 
-def _build_chain(budget: str, entry: dict) -> list:
-    levels = ["low", "medium", "high"]
-    chain = []
-    # Start from the requested budget, then try others in priority order
-    remaining = [l for l in levels if l != budget]
-    chain.append((budget, entry[budget]))
-    for l in remaining:
-        chain.append((l, entry[l]))
+def _build_chain(budget, entry, fallback_chain):
+    chain = [(budget, entry[budget])]
+    for level in fallback_chain:
+        if level != budget and level in BUDGET_LEVELS:
+            chain.append((level, entry[level]))
     return chain
 
 
@@ -143,80 +138,82 @@ def resolve_model(skill_name, budget=None):
     budget = _resolve_budget(budget)
 
     if budget not in BUDGET_LEVELS:
-        current = os.environ.get("OPENCODE_MODEL", "unknown")
+        current = os.environ.get("SKILLKIT_MODEL", "unknown")
         print(f"WARNING: Invalid TOKEN_BUDGET='{budget}'. Must be one of: {', '.join(BUDGET_LEVELS)}", file=sys.stderr)
         print(f"  Keeping current model: {current}", file=sys.stderr)
-        os.environ["OPENCODE_MODO"] = budget + "(invalid)"
+        os.environ["SKILLKIT_MODE"] = budget + "(invalid)"
         return current
 
-    catalogo = _load_models()
-    if catalogo is None:
-        current = os.environ.get("OPENCODE_MODEL", "unknown")
+    catalog = _load_models()
+    if catalog is None:
+        current = os.environ.get("SKILLKIT_MODEL", "unknown")
         print(f"WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
         print(f"  Keeping current model: {current}", file=sys.stderr)
-        os.environ["OPENCODE_MODO"] = budget + "(no_catalog)"
+        os.environ["SKILLKIT_MODE"] = budget + "(no_catalog)"
         return current
 
-    if budget not in BUDGET_LEVELS:
-        current = os.environ.get("OPENCODE_MODEL", "unknown")
-        print(f"WARNING: Invalid TOKEN_BUDGET='{budget}'. Must be one of: {', '.join(BUDGET_LEVELS)}", file=sys.stderr)
-        print(f"  Keeping current model: {current}", file=sys.stderr)
-        os.environ["OPENCODE_MODO"] = budget + "(invalid)"
-        return current
-
-    mapping = catalogo.get("skill_mapping", {})
+    mapping = catalog.get("skill_mapping", {})
     entry = mapping.get(skill_name)
     if entry is None:
-        current = os.environ.get("OPENCODE_MODEL", "unknown")
+        current = os.environ.get("SKILLKIT_MODEL", "unknown")
         print(f"WARNING: Skill '{skill_name}' not found in skill_mapping", file=sys.stderr)
         print(f"  Available: {', '.join(mapping.keys())}", file=sys.stderr)
         print(f"  Keeping current model: {current}", file=sys.stderr)
-        os.environ["OPENCODE_MODO"] = budget + "(unknown_skill)"
+        os.environ["SKILLKIT_MODE"] = budget + "(unknown_skill)"
         return current
 
-    todos = catalogo.get("local", []) + catalogo.get("remoto", [])
-    chain = _build_chain(budget, entry)
+    user_config = _load_user_config(catalog)
+    models = catalog.get("models", [])
+    fallback_chain = catalog.get("config", {}).get("fallback_chain", ["medium", "high", "low"])
+
+    chain = _build_chain(budget, entry, fallback_chain)
 
     for level, model_id in chain:
-        info = next((m for m in todos if m["id"] == model_id), {})
-        if _model_available(model_id, info):
+        info = next((m for m in models if m["id"] == model_id), {})
+        if info and _model_available(model_id, info, catalog, user_config):
             if level != budget:
-                print(f"WARNING: TOKEN_BUDGET={budget} → model '{entry[budget]}' not available", file=sys.stderr)
+                print(f"WARNING: TOKEN_BUDGET={budget} -> model '{entry[budget]}' not available", file=sys.stderr)
                 print(f"  Falling back to '{model_id}' (TOKEN_BUDGET={level})", file=sys.stderr)
-            return _activate_model(model_id, info, budget + f"(fallback_{level})" if level != budget else budget)
+            return _activate_model(model_id, info, budget + f"(fallback_{level})" if level != budget else budget, catalog, user_config)
 
-    current = os.environ.get("OPENCODE_MODEL", "unknown")
-    print(f"WARNING: No model available for TOKEN_BUDGET={budget} → skill '{skill_name}'", file=sys.stderr)
+    current = os.environ.get("SKILLKIT_MODEL", "unknown")
+    print(f"WARNING: No model available for TOKEN_BUDGET={budget} -> skill '{skill_name}'", file=sys.stderr)
     print(f"  TOKEN_BUDGET bypassed. Keeping current model: {current}", file=sys.stderr)
-    os.environ["OPENCODE_MODO"] = budget + "(bypassed)"
+    os.environ["SKILLKIT_MODE"] = budget + "(bypassed)"
     return current
+
+
+def resolve_model_by_id(model_id, budget, catalog=None):
+    if catalog is None:
+        catalog = _load_models()
+    if catalog is None:
+        current = os.environ.get("SKILLKIT_MODEL", "unknown")
+        print(f"WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
+        print(f"  Keeping current model: {current}", file=sys.stderr)
+        return current
+
+    user_config = _load_user_config(catalog)
+    models = catalog.get("models", [])
+    info = next((m for m in models if m["id"] == model_id), {})
+
+    if not info:
+        current = os.environ.get("SKILLKIT_MODEL", "unknown")
+        print(f"WARNING: Model '{model_id}' not found in catalog", file=sys.stderr)
+        print(f"  Keeping current model: {current}", file=sys.stderr)
+        return current
+
+    os.environ["SKILLKIT_MODEL"] = info.get("api_model", model_id)
+    os.environ["SKILLKIT_MODEL_DESC"] = info.get("description", "")
+    os.environ["SKILLKIT_MODE"] = budget
+    os.environ["SKILLKIT_PROVIDER"] = info.get("provider", "")
+
+    provider_cfg = _get_provider_config(catalog, user_config, info.get("provider", ""))
+    _set_api_env(provider_cfg)
+
+    return model_id
 
 
 def resolve_model_legacy(modelo_local, modelo_remoto, budget=None):
     budget = _resolve_budget(budget)
     target = modelo_local if budget == "low" else modelo_remoto
     return resolve_model_by_id(target, budget)
-
-
-def resolve_model_by_id(modelo_id, budget):
-    catalogo = _load_models()
-    todos = catalogo.get("local", []) + catalogo.get("remoto", [])
-    info = next((m for m in todos if m["id"] == modelo_id), {})
-
-    if not info:
-        current = os.environ.get("OPENCODE_MODEL", "unknown")
-        print(f"WARNING: Model '{modelo_id}' not found in catalog", file=sys.stderr)
-        print(f"  Keeping current model: {current}", file=sys.stderr)
-        return current
-
-    via_go = modelo_id.startswith("opencode-go/")
-    api_model = modelo_id.replace("opencode-go/", "") if via_go else modelo_id
-
-    os.environ["OPENCODE_MODEL"] = api_model
-    os.environ["OPENCODE_MODEL_DESC"] = info.get("descripcion", "")
-    os.environ["OPENCODE_MODO"] = budget
-    os.environ["OPENCODE_PROVEEDOR"] = info.get("proveedor", "")
-
-    _set_api_env(info.get("proveedor", ""), via_opencode_go=via_go)
-
-    return modelo_id

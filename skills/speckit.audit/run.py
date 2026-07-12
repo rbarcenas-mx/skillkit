@@ -35,20 +35,20 @@ NUM_PREDICT = {'spec': 2048, 'plan': 2048, 'tasks': 2048, 'codigo': 2048}
 
 # ── Model banner ─────────────────────────────────────────────
 def print_model_banner(stage, tarea_desc):
-    modo_raw = os.environ.get("OPENCODE_MODO", "?")
+    modo_raw = os.environ.get("SKILLKIT_MODE", "?")
     modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(modo_raw, modo_raw)
     modo_explicacion = {
         "low": "modelos locales via Ollama (sin costo, mayor latencia)",
         "medium": "modelos remotos calidad/costo optimo (DeepSeek/OpenCode)",
         "high": "modelos remotos economicos (costo minimo)",
     }.get(modo_raw, modo_raw)
-    modelo = os.environ.get("OPENCODE_MODEL", "?")
-    proveedor = os.environ.get("OPENCODE_PROVEEDOR", "?")
+    modelo = os.environ.get("SKILLKIT_MODEL", "?")
+    provider = os.environ.get("SKILLKIT_PROVIDER", "?")
     sys.stderr.write(f"\n{'='*54}\n")
     sys.stderr.write(f"  \U0001f9e0 Model Router\n")
     sys.stderr.write(f"{'─'*54}\n")
     sys.stderr.write(f"  Modo:     {modo_label} — {modo_explicacion}\n")
-    sys.stderr.write(f"  Modelo:   {modelo} ({proveedor})\n")
+    sys.stderr.write(f"  Modelo:   {modelo} ({provider})\n")
     sys.stderr.write(f"  Motivo:   {tarea_desc}\n")
     sys.stderr.write(f"  Etapa:    {stage}\n")
     sys.stderr.write(f"{'='*54}\n\n")
@@ -71,11 +71,11 @@ def spinner_while_waiting(stop_event, label="Procesando"):
 
 
 def get_api_url() -> str:
-    return os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+    return os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 
 
 def get_api_key() -> str:
-    return os.environ.get("OPENCODE_API_KEY", "")
+    return os.environ.get("SKILLKIT_API_KEY", "")
 
 
 # =============================================================================
@@ -207,8 +207,8 @@ def extract_findings(report: str) -> tuple:
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 2048, timeout: int = 600,
                label: str = "Auditando") -> str:
-    # Usar OPENCODE_MODEL si esta disponible (sin prefijo opencode-go/)
-    api_model = os.environ.get("OPENCODE_MODEL", model)
+    # Usar SKILLKIT_MODEL si esta disponible
+    api_model = os.environ.get("SKILLKIT_MODEL", model)
     payload = {
         "model": api_model, "stream": False,
         "options": {"num_predict": num_predict},
@@ -220,8 +220,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
     prompt_chars = len(user_msg) + len(system_prompt)
     log(f"  ▶ Payload: {prompt_chars:,} chars, modelo={api_model}")
 
-    pfile = '/tmp/opencode/payload_audit.json'
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    pfile = '/tmp/skillkit/payload_audit.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(pfile, 'w') as f:
         json.dump(payload, f, ensure_ascii=False)
 

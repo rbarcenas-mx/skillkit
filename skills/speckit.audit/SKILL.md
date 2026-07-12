@@ -53,9 +53,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('audit.spec_plan_tasks')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -101,7 +101,7 @@ Proceed? (y/n)
 ## Step 4 — Copy run.py
 
 ```bash
-cp "$HOME/.claude/skills/speckit.audit/run.py" /tmp/opencode/speckit_audit_run.py
+cp "$SKILLKIT_HOME/skills/speckit.audit/run.py" /tmp/skillkit/speckit_audit_run.py
 ```
 
 ## Step 5 — Detect stages and resolve status
@@ -109,7 +109,7 @@ cp "$HOME/.claude/skills/speckit.audit/run.py" /tmp/opencode/speckit_audit_run.p
 Use `detect-stage.sh` for available stages:
 
 ```bash
-bash "$HOME/.claude/skills/speckit.audit/scripts/detect-stage.sh" "$WORKDIR"
+bash "$SKILLKIT_HOME/skills/speckit.audit/scripts/detect-stage.sh" "$WORKDIR"
 ```
 
 Output JSON with `stage`, `features`, `has_spec`, `has_plan`, `has_tasks`, `has_code`, `code_census`, `batches_suggested`.
@@ -158,7 +158,7 @@ Options:
 AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_FEATURE="<feature>" \
 AUDIT_STAGE="<spec|plan|tasks>" \
-python3 /tmp/opencode/speckit_audit_run.py
+python3 /tmp/skillkit/speckit_audit_run.py
 ```
 
 Returns JSON with `status`, `stage`, `result.veredicto`, `result.report`, `checkpoint`.
@@ -168,7 +168,7 @@ Returns JSON with `status`, `stage`, `result.veredicto`, `result.report`, `check
 First, census the code:
 
 ```bash
-bash "$HOME/.claude/skills/speckit.audit/scripts/census-code.sh" "$WORKDIR"
+bash "$SKILLKIT_HOME/skills/speckit.audit/scripts/census-code.sh" "$WORKDIR"
 ```
 
 CRITICAL: Execute ONE batch at a time. Each batch is an independent call to `run.py`.
@@ -178,12 +178,12 @@ AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_FEATURE="<feature>" \
 AUDIT_STAGE="codigo" \
 AUDIT_BATCH="0" \
-python3 /tmp/opencode/speckit_audit_run.py
+python3 /tmp/skillkit/speckit_audit_run.py
 # ← PRESENT RESULTS, ASK TO CONTINUE
 
 # Batch 1 — only if user said "yes"
 AUDIT_BATCH="1" \
-python3 /tmp/opencode/speckit_audit_run.py
+python3 /tmp/skillkit/speckit_audit_run.py
 ```
 
 ## Step 9 — Audit lint (1 call)
@@ -192,7 +192,7 @@ python3 /tmp/opencode/speckit_audit_run.py
 AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_FEATURE="<feature>" \
 AUDIT_STAGE="lint" \
-python3 /tmp/opencode/speckit_audit_run.py
+python3 /tmp/skillkit/speckit_audit_run.py
 ```
 
 ## Step 10 — Between each batch/stage, report to user (REQUIRED)
@@ -216,7 +216,7 @@ When all stages/batches are complete:
 AUDIT_WORKDIR="$WORKDIR" \
 AUDIT_FEATURE="<feature>" \
 AUDIT_CONSOLIDATE='[{"stage":"spec","veredicto":"...",...}]' \
-python3 /tmp/opencode/speckit_audit_run.py
+python3 /tmp/skillkit/speckit_audit_run.py
 ```
 
 Generates `audit/{next_id}-{YYYYMMDD}-{HHMM}-audit.md`.
@@ -242,7 +242,7 @@ Generates `audit/{next_id}-{YYYYMMDD}-{HHMM}-audit.md`.
 
 ## Step 13 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -255,7 +255,7 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ## Step 14 — Link to speckit.audit-resolve
 

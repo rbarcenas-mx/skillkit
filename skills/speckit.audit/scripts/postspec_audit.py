@@ -22,12 +22,12 @@ import json, subprocess, sys, os, re, glob, shutil
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
-API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
 if not _chat_url.endswith('/chat/completions'):
     _chat_url += '/chat/completions'
 API_URL = _chat_url
-API_KEY = os.environ.get("OPENCODE_API_KEY", "")
+API_KEY = os.environ.get("SKILLKIT_API_KEY", "")
 
 def log(msg):
     print(msg, file=sys.stderr, flush=True)
@@ -59,8 +59,8 @@ def run_ollama_prompt(system_prompt, user_content, model, num_predict):
             {"role": "user", "content": user_content}
         ]
     }
-    payload_path = '/tmp/opencode/payload_batch.json'
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    payload_path = '/tmp/skillkit/payload_batch.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(payload_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -140,7 +140,7 @@ def main():
     feature = os.environ.get('AUDIT_FEATURE', '')
     model = os.environ.get('AUDIT_MODEL', resolve_model("audit.spec_plan_tasks"))
     num_predict = {'spec': 2048, 'plan': 2048, 'tasks': 2048, 'codigo': 3072}.get(stage, 2048)
-    context_dir = os.environ.get('AUDIT_CONTEXT_DIR', '/tmp/opencode')
+    context_dir = os.environ.get('AUDIT_CONTEXT_DIR', '/tmp/skillkit')
     workdir = os.environ.get('AUDIT_WORKDIR', os.getcwd())
     audit_path = os.path.join(workdir, 'audit.md')
 
@@ -231,7 +231,7 @@ Reportes:
         resume = os.environ.get('AUDIT_RESUME') == 'true'
         completed_layers = get_completed_layers(audit_path) if resume else set()
         context_fixed = read_file(os.environ.get('AUDIT_FIXED_CONTEXT', os.path.join(context_dir, 'audit_context_fixed.txt')))
-        system_prompt_path = '/tmp/opencode/audit_system_prompt.txt'
+        system_prompt_path = '/tmp/skillkit/audit_system_prompt.txt'
         system_prompt = read_file(system_prompt_path) if batch_files_pattern else f"""Eres un auditor senior. Audita este lote.
 
 Contexto del proyecto:
@@ -296,8 +296,8 @@ Responde únicamente en español."""
         return
 
     # --- Modo normal (spec/plan/tasks) ---
-    system_prompt = read_file('/tmp/opencode/audit_system_prompt.txt')
-    context = read_file('/tmp/opencode/audit_context.txt')
+    system_prompt = read_file('/tmp/skillkit/audit_system_prompt.txt')
+    context = read_file('/tmp/skillkit/audit_context.txt')
     if not system_prompt or not context:
         log("ERROR: faltan audit_system_prompt.txt o audit_context.txt")
         sys.exit(1)

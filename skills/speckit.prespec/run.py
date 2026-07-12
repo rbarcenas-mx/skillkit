@@ -32,14 +32,14 @@ sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
 MODEL = resolve_model("prespec")
-API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
 if not _chat_url.endswith('/chat/completions'):
     _chat_url += '/chat/completions'
 API_URL = _chat_url
-API_KEY = os.environ.get("OPENCODE_API_KEY", "")
+API_KEY = os.environ.get("SKILLKIT_API_KEY", "")
 TIMEOUT = 900
-PROGRESS_FILE = "/tmp/opencode/prespec_progress.json"
+PROGRESS_FILE = "/tmp/skillkit/prespec_progress.json"
 
 
 def log(msg: str) -> None:
@@ -76,7 +76,7 @@ spinner_start = 0.0
 def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> str:
     global spinner_start
     payload = {
-        "model": os.environ.get("OPENCODE_MODEL", MODEL),
+        "model": os.environ.get("SKILLKIT_MODEL", MODEL),
         "stream": False,
         "options": {"num_predict": num_predict},
         "messages": [
@@ -84,8 +84,8 @@ def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> st
             {"role": "user", "content": user_msg},
         ],
     }
-    payload_path = "/tmp/opencode/prespec_payload.json"
-    os.makedirs("/tmp/opencode", exist_ok=True)
+    payload_path = "/tmp/skillkit/prespec_payload.json"
+    os.makedirs("/tmp/skillkit", exist_ok=True)
     with open(payload_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False)
 

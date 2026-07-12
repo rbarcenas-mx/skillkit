@@ -55,9 +55,9 @@ import sys, os, json
 sys.path.insert(0, os.environ['SKILLKIT_HOME'])
 from lib import resolve_model
 model_id = resolve_model('ci.prepare')
-print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('OPENCODE_MODO', 'unknown')))
+print('TOKEN_BUDGET:', os.environ.get('TOKEN_BUDGET', os.environ.get('SKILLKIT_MODE', 'unknown')))
 print('Model:', model_id)
-print('Provider:', os.environ.get('OPENCODE_PROVEEDOR', '?'))
+print('Provider:', os.environ.get('SKILLKIT_PROVIDER', '?'))
 "
 ```
 
@@ -142,7 +142,7 @@ cat .gitignore 2>/dev/null || echo "(does not exist)"
 
 ### 4.4 — Write diagnostics JSON
 
-With the **Write** tool, save to `/tmp/opencode/ci_diagnostics.json`:
+With the **Write** tool, save to `/tmp/skillkit/ci_diagnostics.json`:
 
 ```json
 {
@@ -164,12 +164,12 @@ Only include directories that actually exist and are non-empty.
 ## Step 5 — Execute run.py (analysis with local model)
 
 ```bash
-cp "$HOME/.claude/skills/ci.prepare/run.py" /tmp/opencode/ci_prepare_run.py
+cp "$SKILLKIT_HOME/skills/ci.prepare/run.py" /tmp/skillkit/ci_prepare_run.py
 ```
 
 ```bash
-CI_DIAGNOSTICS_FILE="/tmp/opencode/ci_diagnostics.json" \
-python3 /tmp/opencode/ci_prepare_run.py
+CI_DIAGNOSTICS_FILE="/tmp/skillkit/ci_diagnostics.json" \
+python3 /tmp/skillkit/ci_prepare_run.py
 ```
 
 `timeout=660000` (11 min). run.py sends diagnostics to the local model (resolved via `resolve_model("ci.prepare")`) and generates:
@@ -284,7 +284,7 @@ N tasks ready to execute with /ci.execute
 
 ## Step 9 — Token report
 
-Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
 
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
@@ -297,13 +297,13 @@ Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓
 {repeat for second group if phases and orchestration are in different groups}
 ```
 
-For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
 ## Checkpoint & resume
 
-- **Progress file**: `/tmp/opencode/ci_prepare_progress.json` tracks `{"phase": "analysis|done", "status": "running|done|failed", "timestamp": "ISO8601"}`.
+- **Progress file**: `/tmp/skillkit/ci_prepare_progress.json` tracks `{"phase": "analysis|done", "status": "running|done|failed", "timestamp": "ISO8601"}`.
 - **Single-shot**: ci.prepare is a single analysis → one output. No multi-step resume needed. If interrupted, restart from diagnostics.
 
 ## Notes

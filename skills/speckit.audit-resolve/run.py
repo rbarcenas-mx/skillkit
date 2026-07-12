@@ -43,13 +43,13 @@ C = {
     'reset': '\033[0m', 'clear': '\033[K',
 }
 
-def print_model_banner(modo_label, modelo, proveedor, motivo, accion, action_type="solve"):
+def print_model_banner(modo_label, modelo, provider, motivo, accion, action_type="solve"):
     action_label = {"suggest": "Sugiriendo soluciones", "solve": "Aplicando soluciones directamente"}.get(action_type, action_type)
     sys.stderr.write(f"\n{'='*54}\n")
     sys.stderr.write(f"  {C['bold']}\U0001f9e0 Model Router{C['reset']}\n")
     sys.stderr.write(f"{'─'*54}\n")
     sys.stderr.write(f"  Modo:     {modo_label}\n")
-    sys.stderr.write(f"  Modelo:   {modelo} ({proveedor})\n")
+    sys.stderr.write(f"  Modelo:   {modelo} ({provider})\n")
     sys.stderr.write(f"  Motivo:   {motivo}\n")
     sys.stderr.write(f"  Accion:   {action_label}\n")
     sys.stderr.write(f"  Etapa:    {accion}\n")
@@ -103,12 +103,12 @@ def progress_bar(done: int, total: int, label: str = "") -> None:
 # CHECKPOINT (reanudacion)
 # =============================================================================
 
-PROGRESS_PATH = '/tmp/opencode/audit_resolve_progress.json'
+PROGRESS_PATH = '/tmp/skillkit/audit_resolve_progress.json'
 
 
 def save_progress(data: dict) -> None:
     data['timestamp'] = now_iso()
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(PROGRESS_PATH, 'w') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -128,7 +128,7 @@ def load_progress() -> dict | None:
 def run_model(system_prompt: str, user_msg: str, skill_name: str,
               num_predict: int = 2048, timeout: int = 600) -> str:
     resolve_model(skill_name)
-    api_model = os.environ.get("OPENCODE_MODEL", "")
+    api_model = os.environ.get("SKILLKIT_MODEL", "")
 
     payload = {
         "model": api_model, "stream": False,
@@ -138,13 +138,13 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
             {"role": "user", "content": user_msg},
         ],
     }
-    pfile = '/tmp/opencode/audit_resolve_payload.json'
-    os.makedirs('/tmp/opencode', exist_ok=True)
+    pfile = '/tmp/skillkit/audit_resolve_payload.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(pfile, 'w') as f:
         json.dump(payload, f, ensure_ascii=False)
 
-    api_url = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
-    api_key = os.environ.get("OPENCODE_API_KEY", "")
+    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("SKILLKIT_API_KEY", "")
     headers = ["-H", "Content-Type: application/json"]
     if api_key:
         headers += ["-H", f"Authorization: Bearer {api_key}"]
@@ -158,7 +158,7 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
              *headers, "-d", "@" + pfile],
             capture_output=True, text=True, timeout=timeout)
         # Guardar respuesta cruda para debug
-        rfile = '/tmp/opencode/audit_resolve_raw_response.json'
+        rfile = '/tmp/skillkit/audit_resolve_raw_response.json'
         with open(rfile, 'w') as f:
             json.dump({"status": "debug", "response": r.stdout[:2000]}, f, ensure_ascii=False)
 
@@ -438,7 +438,7 @@ def resolve_finding(workdir: str, finding: dict, idx: int, action: str = "solve"
 
     # Guardar sugerencia
     safe_stage = re.sub(r'[^a-zA-Z0-9_-]', '_', finding['stage_title'])
-    sug_path = f'/tmp/opencode/audit_resolve_suggestion_{safe_stage}_{idx}.md'
+    sug_path = f'/tmp/skillkit/audit_resolve_suggestion_{safe_stage}_{idx}.md'
     write_file(sug_path, suggestion)
 
     # Aplicar sugerencia solo en modo solve
@@ -613,12 +613,12 @@ def resolve_stage(workdir: str, stage_title: str, action: str = "solve") -> dict
         if current_type != last_stage_type:
             skill_name = get_model_name(current_type)
             resolve_model(skill_name)
-            modo_raw = os.environ.get("OPENCODE_MODO", os.environ.get("TOKEN_BUDGET", "?"))
+            modo_raw = os.environ.get("SKILLKIT_MODE", os.environ.get("TOKEN_BUDGET", "?"))
             modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(modo_raw, modo_raw)
-            modelo = os.environ.get("OPENCODE_MODEL", "?")
-            proveedor = os.environ.get("OPENCODE_PROVEEDOR", "?")
+            modelo = os.environ.get("SKILLKIT_MODEL", "?")
+            provider = os.environ.get("SKILLKIT_PROVIDER", "?")
             group_label = current_type.upper() if current_type in ('spec','plan','tasks') else 'CODIGO'
-            print_model_banner(modo_label, modelo, proveedor,
+            print_model_banner(modo_label, modelo, provider,
                                f"Resolviendo hallazgos de {group_label}",
                                f"{stage_title} [{i+1}/{total}] {finding['finding_id']}",
                                action_type=action)
@@ -738,12 +738,12 @@ def resolve(workdir: str, stage_filter: str | None = None, resolve_index: int | 
         if current_type != last_stage_type:
             skill_name = get_model_name(current_type)
             resolve_model(skill_name)
-            modo_raw = os.environ.get("OPENCODE_MODO", os.environ.get("TOKEN_BUDGET", "?"))
+            modo_raw = os.environ.get("SKILLKIT_MODE", os.environ.get("TOKEN_BUDGET", "?"))
             modo_label = {"low": "Low", "medium": "Medium", "high": "High"}.get(modo_raw, modo_raw)
-            modelo = os.environ.get("OPENCODE_MODEL", "?")
-            proveedor = os.environ.get("OPENCODE_PROVEEDOR", "?")
+            modelo = os.environ.get("SKILLKIT_MODEL", "?")
+            provider = os.environ.get("SKILLKIT_PROVIDER", "?")
             group_label = current_type.upper() if current_type in ('spec','plan','tasks') else 'CODIGO'
-            print_model_banner(modo_label, modelo, proveedor,
+            print_model_banner(modo_label, modelo, provider,
                                f"Resolviendo hallazgos de {group_label}",
                                f"Hallazgo {i+1}/{total}: {finding['finding_id']}",
                                action_type=action)

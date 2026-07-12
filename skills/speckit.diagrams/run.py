@@ -28,17 +28,17 @@ sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
 DEFAULT_MODEL = resolve_model("diagrams")
-API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
+API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
 if not _chat_url.endswith('/chat/completions'):
     _chat_url += '/chat/completions'
 API_URL = _chat_url
-API_KEY = os.environ.get("OPENCODE_API_KEY", "")
+API_KEY = os.environ.get("SKILLKIT_API_KEY", "")
 DEFAULT_MODEL = resolve_model("diagrams")
 TIMEOUT = 600
-MANIFEST_FILE = "/tmp/opencode/diagrams_manifest.json"
-CHECKPOINTS_DIR = "/tmp/opencode/diagrams_checkpoints"
-PROGRESS_FILE = "/tmp/opencode/diagrams_progress.json"
+MANIFEST_FILE = "/tmp/skillkit/diagrams_manifest.json"
+CHECKPOINTS_DIR = "/tmp/skillkit/diagrams_checkpoints"
+PROGRESS_FILE = "/tmp/skillkit/diagrams_progress.json"
 
 
 def log(msg: str) -> None:
@@ -62,7 +62,7 @@ def spinner_while_waiting(stop_event, label="Processing"):
 
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
-    api_model = os.environ.get("OPENCODE_MODEL", model)
+    api_model = os.environ.get("SKILLKIT_MODEL", model)
     payload = {
         "model": api_model,
         "stream": False,
@@ -72,8 +72,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
             {"role": "user", "content": user_msg},
         ],
     }
-    payload_path = "/tmp/opencode/diagrams_payload.json"
-    os.makedirs("/tmp/opencode", exist_ok=True)
+    payload_path = "/tmp/skillkit/diagrams_payload.json"
+    os.makedirs("/tmp/skillkit", exist_ok=True)
     with open(payload_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False)
 
@@ -255,7 +255,7 @@ Responde EXACTAMENTE con este JSON (sin texto fuera del JSON):
 
 
 def mode_prepare():
-    context_path = os.environ.get("DIAGRAMS_CONTEXT_FILE", "/tmp/opencode/diagrams_context.json")
+    context_path = os.environ.get("DIAGRAMS_CONTEXT_FILE", "/tmp/skillkit/diagrams_context.json")
     try:
         with open(context_path, "r", encoding="utf-8") as f:
             ctx = json.load(f)
@@ -397,7 +397,7 @@ def mode_generate():
     category = os.environ.get("DIAGRAMS_CATEGORY", "")
     instance = os.environ.get("DIAGRAMS_INSTANCE", "")
     manifest_path = os.environ.get("DIAGRAMS_MANIFEST_FILE", MANIFEST_FILE)
-    context_path = os.environ.get("DIAGRAMS_CONTEXT_FILE", "/tmp/opencode/diagrams_context.json")
+    context_path = os.environ.get("DIAGRAMS_CONTEXT_FILE", "/tmp/skillkit/diagrams_context.json")
 
     try:
         with open(context_path, "r", encoding="utf-8") as f:
