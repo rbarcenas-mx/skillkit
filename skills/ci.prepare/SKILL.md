@@ -5,6 +5,8 @@ description: Analyze the current project state and generate a CI integration pla
 
 # ci.prepare — CI Integration Plan Generation
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (classifications, commit messages, task descriptions) must also be in the user's language.
+
 ## Purpose
 
 Analyze the current project state and generate a CI integration plan with atomic commits following Conventional Commits, rollback commands, and save points. The orchestrator collects diagnostics, delegates heavy analysis to `run.py` (local model), presents results to the user, iterates until approval, and generates the task plan.
@@ -273,22 +275,20 @@ N tasks ready to execute with /ci.execute
 
 ## Step 9 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
-| **Total remote**         |       |             |              | **X,XXX**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Analysis (run.py)        | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| **Total local**          | **1** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
-Adjust based on actual token counts.
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
@@ -303,4 +303,4 @@ Adjust based on actual token counts.
 - **Timeout**: `660000` (11 min) for run.py with local model.
 - **No git commands executed**: This skill only plans. Never runs git add/commit.
 - **Mandatory confirmation**: Use `question` tool before generating the tasks file.
-- **Language**: All generated content (classifications, commit messages, task descriptions) in Spanish without accents or special characters.
+- **Language**: All generated content (classifications, commit messages, task descriptions) must be in the user's language without accents or special characters.

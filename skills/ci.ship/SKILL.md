@@ -5,6 +5,8 @@ description: Validate, push, and monitor CI for commits produced by ci.execute. 
 
 # ci.ship — Publish Commits to GitHub
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (reports, summaries) must also be in the user's language.
+
 ## Purpose
 
 Take local commits produced by `ci.execute`, validate them (lint, build, tests), review them with `pr-review-expert`, push to GitHub, and monitor CI. The orchestrator (remote model according to TOKEN_BUDGET) coordinates atomic steps, presents information to the user, and delegates heavy work to `run.py` (local).
@@ -209,26 +211,22 @@ If CI was successful and a `ci/*_tasks.md` file without `_completed` exists:
 
 ## Step 13 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | 2,500       | —            | 2,500       | 💰   |
-| **Total remote**         |       |             |              | **2,500**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| pre-flight (no model)    | 1     | —           | —            | —           | 🆓   |
-| push (no model)          | 1     | —           | —            | —           | 🆓   |
-| ci-wait (no model)       | 1     | —           | —            | —           | 🆓   |
-| pr-review (model)        | N     | XX,XXX      | XX,XXX       | XX,XXX      | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
----
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
+---
 ## Checkpoint & resume
 
 - **Progress**: `/tmp/opencode/ci_ship_progress.json` tracks `preflight`, `review`, `push`, `ci_wait` phases
@@ -239,5 +237,5 @@ If CI was successful and a `ci/*_tasks.md` file without `_completed` exists:
 - **Orchestrator model**: resolved via `resolve_model("ci.ship")` according to TOKEN_BUDGET
 - **Timeouts**: 300s for pre-flight, 120s for push, 300s for CI wait
 - **Never push without explicit user confirmation**
-- **Language**: All generated content in Spanish without accents or special characters
+- **Language**: All generated content must be in the user's language without accents or special characters
 - **Team mode**: uses `git push -u origin <branch>` instead of main, then `gh pr create`
