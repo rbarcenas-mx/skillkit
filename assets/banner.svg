@@ -1,0 +1,229 @@
+<svg width="1280" height="400" viewBox="0 0 1280 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient: warm off-white left, slightly deeper right -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F8F6EF"/>
+      <stop offset="100%" style="stop-color:#EDE9DF"/>
+    </linearGradient>
+    <!-- Amber glow behind skillkit text -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#EF9F27;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#EF9F27;stop-opacity:0"/>
+    </radialGradient>
+    <!-- Arrow marker teal -->
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#1D7A6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <!-- Arrow marker amber -->
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- ── BACKGROUND ── -->
+  <rect width="1280" height="400" fill="url(#bg)"/>
+  <!-- subtle top border accent -->
+  <rect x="0" y="0" width="1280" height="4" fill="#EF9F27" rx="0"/>
+
+  <!-- ── LEFT SIDE: Dev thinking figure (illustrated with SVG shapes) ── -->
+
+  <!-- Person head -->
+  <circle cx="108" cy="178" r="28" fill="none" stroke="#1D5C52" stroke-width="2.2"/>
+  <!-- Hair -->
+  <path d="M82 168 Q85 148 108 148 Q131 148 134 168" fill="#1D5C52"/>
+  <!-- Ear left -->
+  <ellipse cx="80" cy="182" rx="7" ry="10" fill="none" stroke="#1D5C52" stroke-width="2"/>
+  <!-- Headphone left -->
+  <ellipse cx="78" cy="182" rx="10" ry="13" fill="#1D7A6A" opacity="0.85"/>
+  <!-- Ear right -->
+  <ellipse cx="136" cy="182" rx="7" ry="10" fill="none" stroke="#1D5C52" stroke-width="2"/>
+  <!-- Headphone right -->
+  <ellipse cx="138" cy="182" rx="10" ry="13" fill="#1D7A6A" opacity="0.85"/>
+  <!-- Headphone band -->
+  <path d="M78 172 Q108 145 138 172" fill="none" stroke="#1D5C52" stroke-width="3"/>
+  <!-- Face: eyes -->
+  <circle cx="98" cy="175" r="3" fill="#1D5C52"/>
+  <circle cx="118" cy="175" r="3" fill="#1D5C52"/>
+  <!-- Chin/jaw -->
+  <path d="M84 188 Q108 212 132 188" fill="none" stroke="#1D5C52" stroke-width="1.8"/>
+  <!-- Hand on chin gesture -->
+  <path d="M95 210 Q108 222 122 210" fill="none" stroke="#1D5C52" stroke-width="2"/>
+  <!-- Body/shirt -->
+  <path d="M72 240 Q72 210 108 210 Q144 210 144 240 L150 310 L66 310 Z" fill="none" stroke="#1D5C52" stroke-width="2"/>
+  <!-- Shirt collar -->
+  <path d="M95 210 L108 228 L121 210" fill="none" stroke="#1D5C52" stroke-width="1.8"/>
+
+  <!-- Thought bubbles -->
+  <circle cx="148" cy="195" r="5" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <circle cx="162" cy="180" r="8" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <circle cx="180" cy="162" r="12" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+
+  <!-- Thought cloud -->
+  <ellipse cx="238" cy="138" rx="62" ry="42" fill="#EAF5F2" stroke="#1D7A6A" stroke-width="1.8"/>
+  <ellipse cx="200" cy="152" rx="28" ry="22" fill="#EAF5F2" stroke="#1D7A6A" stroke-width="1.8"/>
+  <ellipse cx="272" cy="148" rx="30" ry="22" fill="#EAF5F2" stroke="#1D7A6A" stroke-width="1.8"/>
+  <ellipse cx="238" cy="104" rx="22" ry="16" fill="#EAF5F2" stroke="#1D7A6A" stroke-width="1.8"/>
+  <!-- Network inside cloud -->
+  <circle cx="238" cy="136" r="10" fill="#1D7A6A" opacity="0.85"/>
+  <circle cx="214" cy="120" r="5" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <circle cx="260" cy="120" r="5" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <circle cx="214" cy="152" r="5" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <circle cx="260" cy="152" r="5" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <line x1="228" y1="136" x2="219" y2="122" stroke="#1D7A6A" stroke-width="1.2"/>
+  <line x1="248" y1="136" x2="255" y2="122" stroke="#1D7A6A" stroke-width="1.2"/>
+  <line x1="228" y1="136" x2="219" y2="150" stroke="#1D7A6A" stroke-width="1.2"/>
+  <line x1="248" y1="136" x2="255" y2="150" stroke="#1D7A6A" stroke-width="1.2"/>
+
+  <!-- AI badge -->
+  <rect x="52" y="210" width="36" height="28" rx="8" fill="#1D7A6A"/>
+  <text x="70" y="229" font-family="Georgia, serif" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">AI</text>
+
+  <!-- Lightbulb icon -->
+  <ellipse cx="58" cy="130" rx="12" ry="14" fill="none" stroke="#EF9F27" stroke-width="1.8"/>
+  <line x1="58" y1="144" x2="58" y2="152" stroke="#EF9F27" stroke-width="1.8"/>
+  <line x1="52" y1="148" x2="64" y2="148" stroke="#EF9F27" stroke-width="1.5"/>
+  <!-- rays -->
+  <line x1="58" y1="112" x2="58" y2="106" stroke="#EF9F27" stroke-width="1.2"/>
+  <line x1="44" y1="118" x2="40" y2="114" stroke="#EF9F27" stroke-width="1.2"/>
+  <line x1="72" y1="118" x2="76" y2="114" stroke="#EF9F27" stroke-width="1.2"/>
+
+  <!-- ── MIDDLE: Flow nodes ── -->
+  <!-- Vertical flow line -->
+  <line x1="400" y1="80" x2="400" y2="320" stroke="#1D7A6A" stroke-width="1.5" stroke-dasharray="0"/>
+
+  <!-- Node 1: eye -->
+  <circle cx="400" cy="110" r="22" fill="#1D7A6A"/>
+  <ellipse cx="400" cy="110" rx="11" ry="7" fill="white" opacity="0.9"/>
+  <circle cx="400" cy="110" r="4" fill="#1D5C52"/>
+
+  <!-- Arrow right from node 1 -->
+  <line x1="422" y1="110" x2="468" y2="110" stroke="#1D7A6A" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+
+  <!-- Node 2: ring -->
+  <circle cx="400" cy="180" r="22" fill="none" stroke="#1D7A6A" stroke-width="3"/>
+  <circle cx="400" cy="180" r="10" fill="#1D7A6A"/>
+
+  <!-- Node 3: box -->
+  <circle cx="400" cy="248" r="22" fill="#1D7A6A" opacity="0.7"/>
+  <rect x="391" y="239" width="18" height="18" rx="3" fill="white" opacity="0.85"/>
+
+  <!-- Node 4: db -->
+  <circle cx="400" cy="316" r="22" fill="#1D7A6A"/>
+  <ellipse cx="400" cy="308" rx="10" ry="4" fill="white" opacity="0.7"/>
+  <rect x="390" y="308" width="20" height="10" fill="white" opacity="0.3"/>
+  <ellipse cx="400" cy="318" rx="10" ry="4" fill="white" opacity="0.5"/>
+
+  <!-- Arrow right from node 4 -->
+  <line x1="422" y1="316" x2="468" y2="316" stroke="#1D7A6A" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+
+  <!-- Small secondary flow: checklist box bottom left of flow -->
+  <rect x="316" y="280" width="48" height="48" rx="6" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <line x1="326" y1="295" x2="354" y2="295" stroke="#1D7A6A" stroke-width="1.2"/>
+  <line x1="326" y1="305" x2="354" y2="305" stroke="#1D7A6A" stroke-width="1.2"/>
+  <line x1="326" y1="315" x2="354" y2="315" stroke="#1D7A6A" stroke-width="1.2"/>
+  <circle cx="325" cy="295" r="3" fill="#1D7A6A"/>
+  <circle cx="325" cy="305" r="3" fill="#1D7A6A"/>
+  <!-- Arrow from checklist to gear -->
+  <line x1="364" y1="316" x2="375" y2="316" stroke="#1D7A6A" stroke-width="1.2" marker-end="url(#arr-teal)"/>
+
+  <!-- Gear node (between flow and skillkit) -->
+  <circle cx="480" cy="240" r="20" fill="#1D7A6A" opacity="0.6"/>
+  <!-- gear teeth simplified -->
+  <circle cx="480" cy="240" r="10" fill="white" opacity="0.6"/>
+  <circle cx="480" cy="240" r="5" fill="#1D7A6A"/>
+  <rect x="475" y="220" width="10" height="6" rx="2" fill="#1D7A6A" opacity="0.7"/>
+  <rect x="475" y="254" width="10" height="6" rx="2" fill="#1D7A6A" opacity="0.7"/>
+  <rect x="460" y="235" width="6" height="10" rx="2" fill="#1D7A6A" opacity="0.7"/>
+  <rect x="494" y="235" width="6" height="10" rx="2" fill="#1D7A6A" opacity="0.7"/>
+
+  <!-- Arrow from flow area toward skillkit -->
+  <line x1="502" y1="240" x2="554" y2="240" stroke="#EF9F27" stroke-width="2" marker-end="url(#arr-amber)"/>
+
+  <!-- ── SKILLKIT HERO (center-right) ── -->
+  <!-- Ambient glow -->
+  <ellipse cx="720" cy="200" rx="200" ry="130" fill="url(#glow)"/>
+
+  <!-- Monitor frame -->
+  <rect x="576" y="120" width="288" height="190" rx="12" fill="#1D3A36" stroke="#1D7A6A" stroke-width="2"/>
+  <!-- Screen bezel -->
+  <rect x="584" y="128" width="272" height="162" rx="8" fill="#0F2421"/>
+  <!-- Monitor stand -->
+  <rect x="700" y="310" width="40" height="20" rx="4" fill="#1D3A36"/>
+  <rect x="680" y="328" width="80" height="8" rx="4" fill="#1D3A36"/>
+
+  <!-- skillkit text on screen -->
+  <text x="720" y="208" font-family="Georgia, serif" font-size="46" font-weight="700" fill="#EF9F27" text-anchor="middle" letter-spacing="-1">skillkit</text>
+  <!-- icon row below name: gear + wave -->
+  <text x="720" y="245" font-family="'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#EF9F27" text-anchor="middle" opacity="0.7">⚙  ∿  →</text>
+  <!-- sub label -->
+  <text x="720" y="270" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#9FD4C8" text-anchor="middle">Skills + Token Budget Engine</text>
+
+  <!-- Arrow right from skillkit monitor -->
+  <line x1="868" y1="210" x2="918" y2="210" stroke="#EF9F27" stroke-width="2" marker-end="url(#arr-amber)"/>
+
+  <!-- ── RIGHT: Dashboard / server output ── -->
+  <!-- Server rack left -->
+  <rect x="930" y="130" width="56" height="170" rx="6" fill="none" stroke="#1D7A6A" stroke-width="1.5"/>
+  <rect x="938" y="140" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.5"/>
+  <rect x="938" y="154" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.5"/>
+  <rect x="938" y="168" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.4"/>
+  <rect x="938" y="182" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.4"/>
+  <rect x="938" y="196" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.35"/>
+  <rect x="938" y="210" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.35"/>
+  <rect x="938" y="224" width="40" height="8" rx="2" fill="#EF9F27" opacity="0.6"/>
+  <rect x="938" y="238" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.3"/>
+  <rect x="938" y="252" width="40" height="8" rx="2" fill="#1D7A6A" opacity="0.3"/>
+  <!-- LED dots -->
+  <circle cx="944" cy="144" r="2.5" fill="#1DCA8A"/>
+  <circle cx="944" cy="158" r="2.5" fill="#1DCA8A"/>
+  <circle cx="944" cy="172" r="2.5" fill="#EF9F27"/>
+  <circle cx="944" cy="228" r="2.5" fill="#EF9F27"/>
+
+  <!-- Arrow -->
+  <line x1="988" y1="210" x2="1018" y2="210" stroke="#1D7A6A" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+
+  <!-- Dashboard output window -->
+  <rect x="1020" y="100" width="220" height="200" rx="10" fill="white" stroke="#1D7A6A" stroke-width="1.5"/>
+  <!-- Window chrome -->
+  <rect x="1020" y="100" width="220" height="24" rx="10" fill="#1D7A6A"/>
+  <circle cx="1036" cy="112" r="4" fill="white" opacity="0.5"/>
+  <circle cx="1050" cy="112" r="4" fill="white" opacity="0.5"/>
+  <circle cx="1064" cy="112" r="4" fill="white" opacity="0.5"/>
+  <text x="1130" y="116" font-family="'Helvetica Neue', Arial, sans-serif" font-size="10" fill="white" text-anchor="middle" opacity="0.8">skill report</text>
+
+  <!-- Chart bars -->
+  <rect x="1036" y="200" width="18" height="60" rx="3" fill="#1D7A6A" opacity="0.7"/>
+  <rect x="1060" y="180" width="18" height="80" rx="3" fill="#1D7A6A" opacity="0.85"/>
+  <rect x="1084" y="215" width="18" height="45" rx="3" fill="#EF9F27" opacity="0.85"/>
+  <rect x="1108" y="190" width="18" height="70" rx="3" fill="#1D7A6A" opacity="0.6"/>
+  <rect x="1132" y="170" width="18" height="90" rx="3" fill="#1D7A6A" opacity="0.9"/>
+  <rect x="1156" y="205" width="18" height="55" rx="3" fill="#EF9F27" opacity="0.7"/>
+  <rect x="1180" y="185" width="18" height="75" rx="3" fill="#1D7A6A" opacity="0.75"/>
+
+  <!-- Pie chart top right -->
+  <circle cx="1180" cy="150" r="28" fill="none" stroke="#E8E6DE" stroke-width="22"/>
+  <circle cx="1180" cy="150" r="28" fill="none" stroke="#1D7A6A" stroke-width="22"
+          stroke-dasharray="88 176" stroke-dashoffset="44"/>
+  <circle cx="1180" cy="150" r="28" fill="none" stroke="#EF9F27" stroke-width="22"
+          stroke-dasharray="44 176" stroke-dashoffset="-44"/>
+
+  <!-- Small pie bottom left of dashboard -->
+  <circle cx="1055" cy="158" r="20" fill="none" stroke="#E8E6DE" stroke-width="14"/>
+  <circle cx="1055" cy="158" r="20" fill="none" stroke="#1D7A6A" stroke-width="14"
+          stroke-dasharray="75 125" stroke-dashoffset="25"/>
+  <circle cx="1055" cy="158" r="20" fill="none" stroke="#EF9F27" stroke-width="14"
+          stroke-dasharray="25 125" stroke-dashoffset="-50"/>
+
+  <!-- ── BOTTOM CAPTION BAND ── -->
+  <rect x="0" y="356" width="1280" height="44" fill="#1D3A36" opacity="0.06"/>
+
+  <!-- Left: github link -->
+  <text x="48" y="383" font-family="'Helvetica Neue', Arial, sans-serif" font-size="13" fill="#1D5C52">github.com/rbarcenas-mx/skillkit</text>
+
+  <!-- Center: tagline -->
+  <text x="640" y="383" font-family="Georgia, serif" font-size="14" font-style="italic" fill="#412402" text-anchor="middle">AI Skills library for developer teams · Advisor + Executor pattern</text>
+
+  <!-- Right: MIT badge -->
+  <rect x="1180" y="366" width="56" height="22" rx="5" fill="#1D7A6A" opacity="0.15" stroke="#1D7A6A" stroke-width="1"/>
+  <text x="1208" y="381" font-family="'Helvetica Neue', Arial, sans-serif" font-size="11" fill="#1D5C52" text-anchor="middle">MIT</text>
+</svg>
