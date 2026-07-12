@@ -11,6 +11,15 @@ description: Analyze the current project state and generate a CI integration pla
 
 Analyze the current project state and generate a CI integration plan with atomic commits following Conventional Commits, rollback commands, and save points. The orchestrator collects diagnostics, delegates heavy analysis to `run.py` (local model), presents results to the user, iterates until approval, and generates the task plan.
 
+## Pipeline
+
+```
+ci.prepare  ──>  ci.execute  ──>  ci.ship
+(plan)           (commit)         (push + CI)
+```
+
+`ci.prepare` generates the task plan. Next skill in the flow: `ci.execute`.
+
 ## Architecture
 
 ```

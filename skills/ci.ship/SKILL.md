@@ -11,6 +11,15 @@ description: Validate, push, and monitor CI for commits produced by ci.execute. 
 
 Take local commits produced by `ci.execute`, validate them (lint, build, tests), review them with `pr-review-expert`, push to GitHub, and monitor CI. The orchestrator (remote model according to TOKEN_BUDGET) coordinates atomic steps, presents information to the user, and delegates heavy work to `run.py` (local).
 
+## Pipeline
+
+```
+ci.prepare  ──>  ci.execute  ──>  ci.ship
+(plan)           (commit)         (push + CI)
+```
+
+`ci.ship` is the final step — it pushes commits from `ci.execute` to the remote and optionally waits for CI. There is no next skill; the pipeline ends here.
+
 ## Architecture
 
 ```
