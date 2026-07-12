@@ -128,10 +128,7 @@ def call_model(system_prompt, user_message):
     if provider != "ollama":
         api_key = get_api_key()
         if api_key:
-            os.makedirs("/tmp/opencode", exist_ok=True)
-            with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
-                _hf.write(f"Authorization: Bearer {api_key}\n")
-            curl_cmd += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+            curl_cmd += ["-H", f"Authorization: Bearer {api_key}"]
     curl_cmd += ["-d", "@" + payload_path]
 
     result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=600)

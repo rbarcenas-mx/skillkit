@@ -5,6 +5,8 @@ description: Execute a QA validation plan locally — runs Docker, migrations, t
 
 # qa.execute — QA Validation Plan Execution
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (plan logs, reports) must also be in the user's language.
+
 ## Purpose
 
 Execute individual QA plans (infra, unit, flow, stress, scale) or plan suites sequentially. Supports `shell`, `http`, and `stress` step types delegating to specialized drivers. Progress bar, checkpoints, Docker recovery, and model-based decision (resolved via `resolve_model("qa.execute")`) on failures.
@@ -160,23 +162,22 @@ For suite plans, rename all associated individual plans as well.
 
 ## Step 9 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
-| **Total remote**         |       |             |              | **X,XXX**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Model decisions          | N     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
----
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
+---
 ## Checkpoint & resume
 
 - **Per-step checkpoint**: each completed step is logged immediately in the plan's Execution Log
@@ -184,7 +185,7 @@ For suite plans, rename all associated individual plans as well.
 
 ## Notes
 
-- **Language**: all content in Spanish without accents or special characters
+- **Language**: All generated content must be in the user's language without accents or special characters
 - **Orchestrator model**: resolved via `resolve_model("qa.execute")` according to TOKEN_BUDGET
 - **Drivers**: loaded on demand by `run.py` based on step `type`
 - **Timeout**: `900000` (15 min) for main script execution

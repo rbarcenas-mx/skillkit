@@ -5,6 +5,8 @@ description: Analyze the current project state and generate QA validation plans 
 
 # qa.prepare — QA Plan Generation by Type
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (plans, reports) must also be in the user's language.
+
 ## Purpose
 
 Analyze the current project state and generate QA validation plans per type. The model is resolved via `resolve_model("qa.prepare")` according to `TOKEN_BUDGET`. Supports 5 plan types and generates `suite_plan.md` when multiple are selected.
@@ -257,22 +259,20 @@ Ask if the user wants to review any plan, modify it, or proceed to execute with 
 
 ## Step 10 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
-| **Total remote**         |       |             |              | **X,XXX**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Plan generation x N      | N     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
-Adjust based on actual number of plan types generated.
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
@@ -284,7 +284,7 @@ Adjust based on actual number of plan types generated.
 
 ## Notes
 
-- **Language**: all content in Spanish without accents
+- **Language**: All generated content must be in the user's language without accents or special characters
 - **Model**: resolved via `resolve_model("qa.prepare")` according to TOKEN_BUDGET
 - **Timeout**: `660000` (11 min) per execution
 - **Cache per type**: `/tmp/opencode/qa_prepare_progress.json` with per-type keys
