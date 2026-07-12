@@ -147,10 +147,7 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
     api_key = os.environ.get("OPENCODE_API_KEY", "")
     headers = ["-H", "Content-Type: application/json"]
     if api_key:
-        os.makedirs("/tmp/opencode", exist_ok=True)
-        with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
-            _hf.write(f"Authorization: Bearer {api_key}\n")
-        headers += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+        headers += ["-H", f"Authorization: Bearer {api_key}"]
     url = api_url.rstrip('/')
     if not url.endswith('/chat/completions'):
         url += '/chat/completions'

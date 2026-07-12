@@ -5,6 +5,8 @@ description: Progressive audit of spec-kit artifacts. 100% local via Ollama. The
 
 # speckit.audit — Progressive Audit of Spec-Kit Artifacts
 
+> **Language note**: All user-facing text (banners, prompts, summaries) below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed.
+
 ## Purpose
 
 Audit spec-kit artifacts progressively. **100% local**: `run.py` is invoked once per stage/batch, returns JSON, and the remote orchestrator (this agent) handles the full flow.
@@ -240,24 +242,43 @@ Generates `audit/{next_id}-{YYYYMMDD}-{HHMM}-audit.md`.
 
 ## Step 13 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | 2,500       | —            | 2,500       | 💰   |
-| **Total remote**         |       |             |              | **2,500**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| spec                     | 1     | 4,200       | 1,800        | 6,000       | 🆓   |
-| plan                     | 1     | 6,800       | 2,100        | 8,900       | 🆓   |
-| tasks                    | 1     | 5,000       | 1,500        | 6,500       | 🆓   |
-| code x N batches         | N     | XX,XXX      | XX,XXX       | XX,XXX      | 🆓   |
-| lint                     | 1     | 3,000       | 1,200        | 4,200       | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
+
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
+
+## Step 14 — Link to speckit.audit-resolve
+
+After the token report, ask the user (present in the user's language):
+
+```
+╔══════════════════════════════════════════════════╗
+║   Critical findings need resolution.            ║
+║                                                 ║
+║   speckit.audit-resolve is the skill in charge  ║
+║   of resolving the findings found.              ║
+║                                                 ║
+║   Do you want to resolve findings now?          ║
+╚══════════════════════════════════════════════════╝
+```
+
+If yes → the orchestrator should pass control to `speckit.audit-resolve` or instruct the user:
+
+```bash
+opencode --skill speckit.audit-resolve
+```
+
+If no → audit is complete. Findings remain in `audit/{id}-audit.md` for later resolution.
 
 ---
 
@@ -270,5 +291,5 @@ Generates `audit/{next_id}-{YYYYMMDD}-{HHMM}-audit.md`.
 ## Notes
 
 - **Models**: resolved via `resolve_model()` according to TOKEN_BUDGET (`audit.spec_plan_tasks` for spec/plan/tasks, `audit.codigo` for code, `audit.lint` for lint)
-- **Language**: All content in Spanish without accents or special characters
+- **Language**: All generated content must be in the user's language without accents or special characters
 - **Timeouts**: 300s per code batch, 120s for spec/plan/tasks, 120s for lint

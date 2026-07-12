@@ -5,6 +5,8 @@ description: Generate Mermaid.js architecture diagrams from spec-kit artifacts. 
 
 # speckit.diagrams — Architecture Diagram Generation
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (diagrams, prompts) must also be in the user's language.
+
 ## Purpose
 
 Generate Mermaid.js architecture diagrams from spec-kit artifacts in `specs/<feature>/`. Progressive orchestration: the remote orchestrator splits the work into phases, delegating each model call to `run.py` (100% local via Ollama).
@@ -263,24 +265,20 @@ specs/<feature>/diagrams/sequence-auth.md
 
 ## Step 10 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
 |---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | X,XXX       | —            | X,XXX       | 💰   |
-| **Total remote**         |       |             |              | **X,XXX**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Phase 1 — prepare        | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| Phase 2 — diagram 1      | 1     | X,XXX       | X,XXX        | X,XXX       | 🆓   |
-| ...                      | ...   | ...         | ...          | ...         | 🆓   |
-| **Total local**          | **N** | **XX,XXX**  | **XX,XXX**   | **XX,XXX**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | X,XXX (~X%)  | 💰   |
-| Local share              |       |             |              | XX,XXX (~X%) | 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
-Adjust based on actual token counts from each run.py call (`_tokens` in JSON response).
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
 ---
 
@@ -297,5 +295,5 @@ Adjust based on actual token counts from each run.py call (`_tokens` in JSON res
 - **Timeouts**: Prepare = 120s, Generate = 300s per diagram.
 - **Payload via file**: run.py sends payloads via `/tmp/opencode/diagrams_payload.json` (avoids ARG_MAX).
 - **Output directory**: `specs/<feature>/diagrams/`. Created if missing.
-- **Language**: All generated content (diagrams, prompts) in Spanish without accents or special characters.
+- **Language**: All generated content (diagrams, prompts) must be in the user's language without accents or special characters.
 - **No placeholders**: Diagrams must use real entities from the artifacts.

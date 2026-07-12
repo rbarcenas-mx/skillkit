@@ -5,6 +5,8 @@ description: Analyzes a raw development idea to find ambiguities, contradictions
 
 # speckit.prespec — Raw Idea Analysis
 
+> **Language note**: All user-facing text below is in English. The orchestrator MUST present all interactions to the user in their language, translating as needed. Generated content (idea.md, prompts) must also be in the user's language.
+
 ## Purpose
 
 Analyze a raw development idea in two phases. Phase 1: run.py sends the idea to the locally-resolved model, generates `idea.md` (sections 1–6) with ambiguities, contradictions, missing pieces, and MVP-critical questions. The orchestrator presents those questions and captures user decisions. Phase 2: run.py refines the document incorporating those decisions, adding user flow and data model (sections 1–8).
@@ -96,7 +98,13 @@ If none found, ask the user to provide the idea.
 cp "$HOME/.claude/skills/speckit.prespec/run.py" /tmp/opencode/prespec_run.py
 ```
 
+Say: `▶ Copying runner... done`
+
 ### 5.2 — Execute (file source)
+
+Say (in the user's language): `▶ Phase 1 — Initial analysis (sending to model, wait up to 11 min)...`
+
+Then execute:
 
 ```bash
 WORKDIR="$WORKDIR" \
@@ -113,6 +121,8 @@ python3 /tmp/opencode/prespec_run.py
 ```
 
 Use `timeout=660000` (11 min).
+
+After execution completes, say: `✓ Phase 1 complete — processing response...`
 
 `run.py`:
 1. Loads the idea from `IDEA_FILE`, `IDEA_TEXT`, or local `idea.txt`
@@ -143,6 +153,8 @@ Use the `question` tool to capture the user's decisions on each question. If the
 
 If the user provided decisions, re-run in refinement mode:
 
+Say (in the user's language): `▶ Phase 2 — Refinement (incorporating decisions, wait up to 11 min)...`
+
 First write the existing idea.md to a temp file to avoid env var size limits:
 
 Write the content to `/tmp/opencode/prespec_existing_doc.md`, then:
@@ -156,6 +168,8 @@ python3 /tmp/opencode/prespec_run.py
 ```
 
 Use `timeout=660000` (11 min).
+
+After completion, say: `✓ Phase 2 complete — idea.md updated with user decisions.`
 
 `run.py` incorporates the decisions and generates the full document (sections 1–8: User Flow and Data Model included). Overwrites `idea.md`.
 
@@ -178,23 +192,20 @@ Checkpoint: if the process is interrupted, re-running phase 1 regenerates `idea.
 
 ## Step 9 — Token report
 
+Check `OPENCODE_PROVEEDOR` to determine if each phase ran local (Ollama → 🆓) or remote (💰). Build the table dynamically:
+
 ```
 | Source                   | Calls | Input (tok) | Output (tok) | Total (tok) | Cost |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | **Remote**               |       |             |              |             |      |
 | SKILL.md + orchestration | 1     | 2,000       | —            | 2,000       | 💰   |
-| **Total remote**         |       |             |              | **2,000**   |      |
-|                          |       |             |              |             |      |
-| **Local**                |       |             |              |             |      |
-| Phase 1 — initial        | 1     | 4,500       | 5,000        | 9,500       | 🆓   |
-| Phase 2 — refine         | 1     | 6,000       | 5,500        | 11,500      | 🆓   |
-| **Total local**          | **2** | **10,500**  | **10,500**   | **21,000**  | 🆓   |
-|---|---|---|---|---|---|---|
-| Remote share             |       |             |              | 2,000 (~9%)  | 💰   |
-| Local share              |       |             |              | 21,000 (~91%)| 🆓   |
+{phase rows — place each phase under Remote or Local based on provider}
+| **Total {group}**       |       |             |              | **N**      | {💰/🆓} |
+|---|---|---|---|---|---|---|---|
+{repeat for second group if phases and orchestration are in different groups}
 ```
 
-Adjust based on actual token counts. If only phase 1 ran (no user decisions), adjust the table.
+For each phase: if `OPENCODE_PROVEEDOR=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output. If only phase 1 ran (no user decisions), omit phase 2 row.
 
 ---
 
@@ -210,4 +221,4 @@ Adjust based on actual token counts. If only phase 1 ran (no user decisions), ad
 - **Model**: resolved via `resolve_model("prespec")` according to TOKEN_BUDGET
 - **Timeout**: `660000` (11 min) per run.py call
 - **Output**: `idea.md` in WORKDIR, overwritten on each run
-- **Language**: All generated content (`idea.md`, prompts) in Spanish without accents or special characters
+- **Language**: All generated content (`idea.md`, prompts) must be in the user's language without accents or special characters

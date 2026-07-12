@@ -31,13 +31,13 @@ sys.stderr.reconfigure(line_buffering=True)
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
+MODEL = resolve_model("prespec")
 API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
 if not _chat_url.endswith('/chat/completions'):
     _chat_url += '/chat/completions'
 API_URL = _chat_url
 API_KEY = os.environ.get("OPENCODE_API_KEY", "")
-MODEL = resolve_model("prespec")
 TIMEOUT = 900
 PROGRESS_FILE = "/tmp/opencode/prespec_progress.json"
 
@@ -76,7 +76,7 @@ spinner_start = 0.0
 def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> str:
     global spinner_start
     payload = {
-        "model": MODEL,
+        "model": os.environ.get("OPENCODE_MODEL", MODEL),
         "stream": False,
         "options": {"num_predict": num_predict},
         "messages": [
@@ -97,10 +97,7 @@ def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> st
     try:
         headers = ["-H", "Content-Type: application/json"]
         if API_KEY:
-            os.makedirs("/tmp/opencode", exist_ok=True)
-            with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
-                _hf.write(f"Authorization: Bearer {API_KEY}\n")
-            headers += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+            headers += ["-H", f"Authorization: Bearer {API_KEY}"]
         result = subprocess.run(
             ["curl", "-s", "-X", "POST", API_URL,
              *headers, "-d", "@" + payload_path],
@@ -114,7 +111,8 @@ def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> st
         if not result.stdout.strip():
             return "ERROR: empty response from model"
         resp = json.loads(result.stdout)
-        content = resp.get("message", {}).get("content", "")
+        choices = resp.get("choices", [])
+        content = choices[0]["message"]["content"] if choices else resp.get("message", {}).get("content", "")
         content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
         return content.strip()
     except subprocess.TimeoutExpired:

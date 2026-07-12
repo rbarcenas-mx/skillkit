@@ -27,6 +27,7 @@ import time
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
+DEFAULT_MODEL = resolve_model("diagrams")
 API_URL = os.environ.get("OPENCODE_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
 if not _chat_url.endswith('/chat/completions'):
@@ -61,8 +62,9 @@ def spinner_while_waiting(stop_event, label="Processing"):
 
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
+    api_model = os.environ.get("OPENCODE_MODEL", model)
     payload = {
-        "model": model,
+        "model": api_model,
         "stream": False,
         "options": {"num_predict": num_predict},
         "messages": [
@@ -78,10 +80,7 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
     try:
         headers = ["-H", "Content-Type: application/json"]
         if API_KEY:
-            os.makedirs("/tmp/opencode", exist_ok=True)
-            with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
-                _hf.write(f"Authorization: Bearer {API_KEY}\n")
-            headers += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+            headers += ["-H", f"Authorization: Bearer {API_KEY}"]
         result = subprocess.run(
             ["curl", "-s", "-X", "POST", API_URL,
              *headers, "-d", "@" + payload_path],
@@ -92,7 +91,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
         if not result.stdout.strip():
             return None, "ERROR: empty response from model"
         resp = json.loads(result.stdout)
-        content = resp.get("message", {}).get("content", "")
+        choices = resp.get("choices", [])
+        content = choices[0]["message"]["content"] if choices else resp.get("message", {}).get("content", "")
         content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
         usage = resp.get("usage", {})
         return content.strip(), usage

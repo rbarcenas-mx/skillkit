@@ -236,10 +236,7 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
         api_key = get_api_key()
         headers = ["-H", "Content-Type: application/json"]
         if api_key:
-            os.makedirs("/tmp/opencode", exist_ok=True)
-            with open("/tmp/opencode/skillkit_headers.conf", "w") as _hf:
-                _hf.write(f"Authorization: Bearer {api_key}\n")
-            headers += ["-K", "/tmp/opencode/skillkit_headers.conf"]
+            headers += ["-H", f"Authorization: Bearer {api_key}"]
         url = api_url.rstrip('/')
         if not url.endswith('/chat/completions'):
             url += '/chat/completions'
