@@ -1,5 +1,9 @@
 # SkillKit
 
+<p align="center">
+  <img src="assets/banner.svg" alt="SkillKit Banner" width="100%">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Engineering teams shouldn't spend their time on repetitive operational work.
