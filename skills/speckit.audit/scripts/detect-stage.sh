@@ -50,10 +50,18 @@ elif $HAS_SPEC; then
     STAGE="spec"
 fi
 
+# Sanitizar nombres de features para JSON (escapar caracteres especiales)
+FEATURES_JSON=""
+for f in "${FEATURES[@]}"; do
+  escaped=$(printf '%s' "$f" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read().strip()))')
+  [ -n "$FEATURES_JSON" ] && FEATURES_JSON="$FEATURES_JSON,"
+  FEATURES_JSON="$FEATURES_JSON$escaped"
+done
+
 cat <<EOF
 {
   "stage": "$STAGE",
-  "features": [$(printf '"%s",' "${FEATURES[@]}" | sed 's/,$//')],
+  "features": [$FEATURES_JSON],
   "has_spec": $HAS_SPEC,
   "has_plan": $HAS_PLAN,
   "has_tasks": $HAS_TASKS,

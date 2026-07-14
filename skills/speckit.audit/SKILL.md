@@ -257,28 +257,46 @@ Check `SKILLKIT_PROVIDER` to determine if each phase ran local (Ollama → 🆓)
 
 For each phase: if `SKILLKIT_PROVIDER=ollama` label as `**Local**` with 🆓, otherwise label as `**Remote**` with 💰. Use actual token counts from run.py output.
 
-## Step 14 — Link to speckit.audit-resolve
+## Step 14 — Handoff to speckit.audit-resolve (MANDATORY if criticals exist)
 
-After the token report, ask the user (present in the user's language):
-
+Check if there are critical findings:
 ```
-╔══════════════════════════════════════════════════╗
-║   Critical findings need resolution.            ║
-║                                                 ║
-║   speckit.audit-resolve is the skill in charge  ║
-║   of resolving the findings found.              ║
-║                                                 ║
-║   Do you want to resolve findings now?          ║
-╚══════════════════════════════════════════════════╝
+  Criticals: N
 ```
 
-If yes → the orchestrator should pass control to `speckit.audit-resolve` or instruct the user:
+**If criticals == 0**: audit complete. No handoff needed.
+
+**If criticals > 0**: the handoff to speckit.audit-resolve is MANDATORY. Present:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║   ⚠️  {N} critical findings found.                       ║
+║                                                           ║
+║   These findings MUST be resolved before audit is         ║
+║   considered complete.                                    ║
+║                                                           ║
+║   ▶ Handing off to speckit.audit-resolve                  ║
+║     for resolution of findings.                           ║
+║                                                           ║
+║   The next skill will:                                    ║
+║     1. Diagnose findings                                  ║
+║     2. Present options (auto / stage-by-stage)             ║
+║     3. Resolve findings with model per stage              ║
+║     4. Verify timestamps                                  ║
+║                                                           ║
+║   Execute: opencode --skill speckit.audit-resolve         ║
+╚═══════════════════════════════════════════════════════════╝
+```
+
+The orchestrator presents this banner and then instructs the user.
+
+If the session supports it, the orchestrator may pass control to `speckit.audit-resolve` directly:
 
 ```bash
 opencode --skill speckit.audit-resolve
 ```
 
-If no → audit is complete. Findings remain in `audit/{id}-audit.md` for later resolution.
+**This is not optional when criticals > 0.** If user declines, the audit is NOT complete and findings remain in `audit/{id}-audit.md`.
 
 ---
 
@@ -293,3 +311,4 @@ If no → audit is complete. Findings remain in `audit/{id}-audit.md` for later 
 - **Models**: resolved via `resolve_model()` according to TOKEN_BUDGET (`audit.spec_plan_tasks` for spec/plan/tasks, `audit.codigo` for code, `audit.lint` for lint)
 - **Language**: All generated content must be in the user's language without accents or special characters
 - **Timeouts**: 300s per code batch, 120s for spec/plan/tasks, 120s for lint
+- **Feature names with compound names**: Features with names like `user-auth`, `data-export`, `payment-gateway` are handled by `detect-stage.sh` as single directories under `specs/`. If `detect-stage.sh` returns no features, verify the directory exists: `ls specs/`. The tool iterates `specs/*/` which works with any directory name. False positives in code audit happen when spec/plan/tasks files cannot be found — ensure `AUDIT_FEATURE` matches the exact directory name under `specs/`.
