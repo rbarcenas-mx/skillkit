@@ -1,10 +1,13 @@
 # SkillKit
 
+> **Status: Beta** — the API and skill format are stabilizing but may change as we learn what works. PRs and feedback welcome.
+
 <p align="center">
   <img src="assets/banner.svg" alt="SkillKit Banner" width="100%">
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/rbarcenas-mx/skillkit/actions/workflows/ci.yml/badge.svg)](https://github.com/rbarcenas-mx/skillkit/actions/workflows/ci.yml)
 
 As an engineering manager, I'm always looking for ways to reduce repetitive work in my team so they can spend more time on what they do best: solving real engineering problems.
 
@@ -83,21 +86,40 @@ The models referenced in `lib/models.json` for each `TOKEN_BUDGET` level must be
 ## Quick start
 
 ```bash
-git clone https://github.com/rbarcenas-mx/skillkit.git ~/skillkit
-cd ~/skillkit
-./install.sh
+pip install skillkit
 ```
 
-`install.sh` is agent-agnostic: it creates `~/.config/skillkit/`, and symlinks skills/commands into any supported agent directory it finds (Claude, opencode, etc.).
+Or from source:
 
-Or manual:
+```bash
+git clone https://github.com/rbarcenas-mx/skillkit.git ~/skillkit
+cd ~/skillkit
+python3 configure.py   # interactive setup
+```
+
+`configure.py` detects your environment and walks you through:
+
+1. **What agents** are installed (opencode, Claude, aider, Cursor)
+2. **Ollama models** available locally
+3. **Remote API keys** already set in your environment
+4. **Token budget** — suggests `low` if Ollama is available, `medium`/`high` if remote keys found
+5. **Model mapping** — lets you remap which Ollama model each skill uses
+6. **Provider setup** — prompts for missing API keys (DeepSeek, opencode-go, Anthropic)
+
+It then generates `~/.config/skillkit/config.json`, adds env vars to your shell rc, and symlinks skills/commands into detected agent directories.
+
+After setup, source your shell and try a skill:
+
+```bash
+source ~/.bashrc
+# then ask your agent: "Run ci.prepare for this project"
+```
+
+For manual setup (no install needed):
 
 ```bash
 export SKILLKIT_HOME="$HOME/skillkit"
 export TOKEN_BUDGET=low
-echo 'export SKILLKIT_HOME="$HOME/skillkit"' >> ~/.bashrc
-echo 'export TOKEN_BUDGET=low' >> ~/.bashrc
-source ~/.bashrc
 ```
 
 ## Skills
@@ -231,15 +253,28 @@ skillkit/
   lib/                    # Token budget engine
     __init__.py           resolve_model(), budget resolution, graceful fallback
     models.json           Model catalog + per-skill mapping
-  skills/                 Anthropic-format skills
+  skills/                 Skill implementations (Anthropic-format)
     ci.execute/
-      SKILL.md
-      run.py
+      SKILL.md            Orchestrator instructions
+      run.py              Executor script
     ...
-  commands/               CLI command references
-    ci.execute.md
-    ...
+  tests/                  Test suite
+    test_lib.py           Unit tests for token budget engine
+  commands/               CLI command references (opencode)
+  configure.py            Interactive setup script
+  pyproject.toml          Package metadata + dev dependencies
+  TODO.md                 Public roadmap
 ```
+
+## Development
+
+```bash
+pip install -e ".[dev]"   # editable install + dev deps
+pytest -v                  # run tests
+ruff check .              # lint
+```
+
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and [TODO.md](TODO.md).
 
 ## Requirements
 
@@ -247,6 +282,10 @@ skillkit/
 - [Ollama](https://ollama.ai) (for `TOKEN_BUDGET=low`)
 - `gh` CLI (for PR review and ci.ship)
 - `curl` (for remote model calls)
+
+## Roadmap
+
+See [TODO.md](TODO.md) for the current priorities: tests, CI, PyPI publishing, model catalog balance, and a standalone CLI.
 
 ## How to extend SkillKit with new skills
 

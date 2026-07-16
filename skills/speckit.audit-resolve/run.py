@@ -194,7 +194,12 @@ def find_last_audit(audit_dir: str) -> str | None:
     return files[0]
 
 
-def extract_checkpoint_findings(cp_dir: str) -> list[dict]:
+def _clean_path(raw: str) -> str:
+    raw = re.sub(r"^['`\s]+|['`\s]+$", "", raw)
+    return re.sub(r':\d+(?:[-,]\d+)*', '', raw).rstrip(',;. ')
+
+
+def extract_checkpoint_findings(cp_dir: str, workdir: str = "") -> list[dict]:
     """Lee todos los checkpoints y extrae hallazgos pendientes."""
     findings = []
     if not os.path.isdir(cp_dir):
@@ -236,7 +241,16 @@ def extract_checkpoint_findings(cp_dir: str) -> list[dict]:
                 r'\*\*Archivo:linea\*\*:\s*(.+?)(?:\*\*|$)',
                 content[m.end():m.end() + 500]
             )
-            archivo = fl.group(1).strip() if fl else ""
+            archivo_raw = fl.group(1).strip() if fl else ""
+            archivo = _clean_path(archivo_raw)
+
+            archivo_valido = False
+            if archivo and workdir:
+                full = os.path.normpath(os.path.join(workdir, archivo))
+                inside = full.startswith(os.path.normpath(workdir) + os.sep)
+                archivo_valido = inside and os.path.isfile(full)
+            if archivo_raw and not archivo_valido:
+                log(f"  ⚠️ Hallazgo {finding_id} en {fname}: ruta no existe o inválida '{archivo}' — ignorando archivo")
 
             # Extraer accion requerida
             ar = re.search(
@@ -258,7 +272,7 @@ def extract_checkpoint_findings(cp_dir: str) -> list[dict]:
                 'stage_title': title,
                 'finding_id': finding_id,
                 'descripcion': desc,
-                'archivo': archivo,
+                'archivo': archivo if archivo_valido else '',
                 'accion': accion,
                 'stage_type': stage_type,
                 'checkpoint_file': fname,
@@ -288,7 +302,7 @@ def diagnose(workdir: str) -> dict:
     if not os.path.isdir(cp_dir):
         return {"status": "error", "message": "No existe audit/checkpoints/"}
 
-    findings = extract_checkpoint_findings(cp_dir)
+    findings = extract_checkpoint_findings(cp_dir, workdir)
 
     if not findings:
         return {"status": "no_findings", "message": "No hay hallazgos pendientes"}
@@ -628,16 +642,17 @@ def resolve_stage(workdir: str, stage_title: str, action: str = "solve") -> dict
         result = resolve_finding(workdir, finding, i, action=action)
         results.append(result)
 
-        # Actualizar checkpoint
-        completed.add(finding_key)
-        save_progress({
-            "stage_name": stage_title,
-            "stage_index": i,
-            "finding_index": i,
-            "completed_stages": list(set(f['stage_title'] for f in findings
-                                          if f"{f['stage_title']}/{f['finding_id']}" in completed)),
-            "completed_findings": list(completed),
-        })
+        # Actualizar checkpoint solo en modo solve
+        if action == "solve":
+            completed.add(finding_key)
+            save_progress({
+                "stage_name": stage_title,
+                "stage_index": i,
+                "finding_index": i,
+                "completed_stages": list(set(f['stage_title'] for f in findings
+                                              if f"{f['stage_title']}/{f['finding_id']}" in completed)),
+                "completed_findings": list(completed),
+            })
 
         progress_bar(i + 1, total, finding_key)
         time.sleep(0.5)

@@ -152,7 +152,17 @@ def resolve_model(skill_name, budget=None):
         os.environ["SKILLKIT_MODE"] = budget + "(no_catalog)"
         return current
 
-    mapping = catalog.get("skill_mapping", {})
+    user_config = _load_user_config(catalog)
+
+    mapping = {k: dict(v) for k, v in catalog.get("skill_mapping", {}).items()}
+    overrides = user_config.get("skill_model_overrides", {})
+    for skill, override in overrides.items():
+        if skill in mapping:
+            if isinstance(override, dict):
+                mapping[skill].update(override)
+            elif isinstance(override, str):
+                mapping[skill]["low"] = override
+
     entry = mapping.get(skill_name)
     if entry is None:
         current = os.environ.get("SKILLKIT_MODEL", "unknown")
@@ -161,8 +171,6 @@ def resolve_model(skill_name, budget=None):
         print(f"  Keeping current model: {current}", file=sys.stderr)
         os.environ["SKILLKIT_MODE"] = budget + "(unknown_skill)"
         return current
-
-    user_config = _load_user_config(catalog)
     models = catalog.get("models", [])
     fallback_chain = catalog.get("config", {}).get("fallback_chain", ["medium", "high", "low"])
 
