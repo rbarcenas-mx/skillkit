@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: pip install -e ".[dev]"
+
+      - run: ruff check .
+
+      - run: pytest -v
+
+      - name: Verify install.sh syntax
+        run: bash -n install.sh
+
+      - name: Verify syntax (Python files)
+        run: python3 -c "
+import ast, os
+for root, dirs, files in os.walk('.'):
+    dirs[:] = [d for d in dirs if d.startswith('.') or d == '__pycache__']
+    for f in files:
+        if f.endswith('.py'):
+            ast.parse(open(os.path.join(root, f)).read())
+print('All Python files: OK')
+"
