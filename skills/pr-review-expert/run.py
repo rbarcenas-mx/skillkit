@@ -32,6 +32,24 @@ sys.stdout.reconfigure(line_buffering=True)
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model
 
+C = {
+    'green': '\033[92m', 'red': '\033[91m', 'yellow': '\033[93m',
+    'cyan': '\033[96m', 'bold': '\033[1m',
+    'reset': '\033[0m', 'clear': '\033[K',
+}
+
+def progress_bar(done, total, label=""):
+    if total <= 0: return
+    pct = int((done / total) * 100)
+    filled = int(30 * done / total)
+    bar_filled = '\u2588' * filled
+    bar_empty = '\u2591' * (30 - filled)
+    color = C['green'] if pct == 100 else (C['yellow'] if pct > 50 else C['cyan'])
+    sys.stderr.write(f'\r{color}[{bar_filled}{bar_empty}]{C["reset"]} {C["bold"]}{pct}%{C["reset"]} ({done}/{total}) {label}{C["clear"]}')
+    sys.stderr.flush()
+    if done >= total:
+        sys.stderr.write('\n')
+
 DEFAULT_MODEL = resolve_model("pr-review")
 API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 API_KEY = os.environ.get("SKILLKIT_API_KEY", "")
@@ -492,6 +510,7 @@ def main():
             print(json.dumps(result))
             sys.exit(1)
         batch = batches[bi - 1]
+        progress_bar(bi - 1, total, batch['label'][:40])
         log(f" Batch {bi}/{total}: {batch['label'][:80]}...")
 
         user_msg = f"## PR Diff (batch {bi}/{total})\nFiles: {batch['label']}\n\n{batch['content']}"

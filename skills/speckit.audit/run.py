@@ -277,6 +277,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
 
 SYS_SPEC = """Eres un auditor senior de producto. Revisa la especificacion.
 
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Especificacion
 
@@ -300,6 +302,8 @@ Responde solo en espanol."""
 
 SYS_PLAN = """Eres un auditor senior de arquitectura. Revisa el plan tecnico.
 
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Plan Tecnico
 
@@ -321,6 +325,8 @@ Responde solo en espanol."""
 
 SYS_TASKS = """Eres un auditor senior de ingenieria. Revisa las tareas.
 
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Tareas
 
@@ -341,6 +347,8 @@ Responde solo en espanol."""
 
 SYS_LINT = """Eres un auditor senior de calidad de codigo. Revisa la salida de herramientas de linting (ESLint, tsc --noEmit, Prettier) y clasifica los hallazgos.
 
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Lint/TypeCheck
 
@@ -360,6 +368,8 @@ APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
 Responde solo en espanol."""
 
 SYS_CODIGO = """Eres un auditor senior de ingenieria. Verifica que el codigo sea coherente con la especificacion, plan y tareas.
+
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
 
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Codigo

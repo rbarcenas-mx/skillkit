@@ -244,13 +244,11 @@ def extract_checkpoint_findings(cp_dir: str, workdir: str = "") -> list[dict]:
             archivo_raw = fl.group(1).strip() if fl else ""
             archivo = _clean_path(archivo_raw)
 
-            archivo_valido = False
-            if archivo and workdir:
+            if archivo_raw and archivo and workdir:
                 full = os.path.normpath(os.path.join(workdir, archivo))
                 inside = full.startswith(os.path.normpath(workdir) + os.sep)
-                archivo_valido = inside and os.path.isfile(full)
-            if archivo_raw and not archivo_valido:
-                log(f"  ⚠️ Hallazgo {finding_id} en {fname}: ruta no existe o inválida '{archivo}' — ignorando archivo")
+                if not inside or not os.path.isfile(full):
+                    log(f"  ⚠️ Hallazgo {finding_id} en {fname}: ruta '{archivo}' no accesible — se conserva como referencia")
 
             # Extraer accion requerida
             ar = re.search(
@@ -272,7 +270,7 @@ def extract_checkpoint_findings(cp_dir: str, workdir: str = "") -> list[dict]:
                 'stage_title': title,
                 'finding_id': finding_id,
                 'descripcion': desc,
-                'archivo': archivo if archivo_valido else '',
+                'archivo': archivo,
                 'accion': accion,
                 'stage_type': stage_type,
                 'checkpoint_file': fname,
@@ -404,7 +402,7 @@ def get_system_prompt(stage_type: str) -> str:
 def _extract_archivo(desc: str) -> str:
     """Extrae ruta de archivo desde backticks en la descripcion del hallazgo.
     Ej: `src/services/mandado.service.ts:68-96,` → src/services/mandado.service.ts"""
-    m = re.search(r'`([^`]+\.(ts|js|rb|py|md|json|yaml|yml))', desc)
+    m = re.search(r'`([^`]+\.(ts|tsx|js|jsx|rb|py|md|json|yaml|yml|prisma))', desc)
     if m:
         path = m.group(1).split(':')[0].rstrip(',').strip()
         return path
@@ -427,23 +425,31 @@ def resolve_finding(workdir: str, finding: dict, idx: int, action: str = "solve"
     # Leer contexto del archivo afectado
     context = ""
     archivo = finding.get('archivo', '')
+    archivo_valido = False
     if archivo:
-        # Extraer solo el nombre del archivo (sin ruta completa)
         fname = archivo.split('`')[0].strip() if '`' in archivo else archivo
         fpath = os.path.join(workdir, fname)
-        context = read_file(fpath)
-        if len(context) > 3000:
-            context = context[:1500] + "\n... [truncado] ...\n" + context[-1500:]
+        raw = read_file(fpath)
+        if raw:
+            archivo_valido = True
+            if len(raw) > 3000:
+                context = raw[:1500] + "\n... [truncado] ...\n" + raw[-1500:]
+            else:
+                context = raw
 
     user_msg = (
         f"## Hallazgo\n"
         f"**ID**: {finding['finding_id']}\n"
         f"**Descripcion**: {finding['descripcion']}\n"
-        f"**Archivo**: {finding.get('archivo', 'N/A')}\n"
+        f"**Archivo**: {archivo if archivo else 'N/A'}\n"
         f"**Accion requerida**: {finding.get('accion', 'N/A')}\n"
     )
     if context:
         user_msg += f"\n## Contexto del archivo\n```\n{context}\n```\n"
+    elif archivo:
+        user_msg += f"\nEl archivo `{archivo}` no existe actualmente en el proyecto. NO inventes rutas. Describe el cambio necesario o usa solo el contexto del hallazgo.\n"
+    else:
+        user_msg += "\nNo hay archivo asociado. Describe el cambio conceptual sin hacer referencia a rutas de archivos.\n"
 
     user_msg += "\nProporciona el cambio exacto para resolver este hallazgo."
 
@@ -638,6 +644,7 @@ def resolve_stage(workdir: str, stage_title: str, action: str = "solve") -> dict
                                action_type=action)
             last_stage_type = current_type
 
+        progress_bar(i + 1, total, finding_key)
         log(f"\n[{i+1}/{total}] Resolviendo {finding_key}...")
         result = resolve_finding(workdir, finding, i, action=action)
         results.append(result)
@@ -654,7 +661,6 @@ def resolve_stage(workdir: str, stage_title: str, action: str = "solve") -> dict
                 "completed_findings": list(completed),
             })
 
-        progress_bar(i + 1, total, finding_key)
         time.sleep(0.5)
 
     return {
@@ -746,7 +752,7 @@ def resolve(workdir: str, stage_filter: str | None = None, resolve_index: int | 
 
         # Si se especifico un indice, es el unico a procesar
         if resolve_index is not None:
-            log(f"\n[{i+1}/{total}] Resolviendo {finding_key} (unico)...")
+            progress_bar(i + 1, total, finding_key)
 
         # Mostrar banner por grupo de modelo
         current_type = finding['stage_type']
@@ -778,7 +784,6 @@ def resolve(workdir: str, stage_filter: str | None = None, resolve_index: int | 
             "completed_findings": list(completed),
         })
 
-        progress_bar(i + 1, total, finding_key)
         # Pequena pausa entre hallazgos
         import time
         time.sleep(0.5)

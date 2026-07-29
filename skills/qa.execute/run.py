@@ -324,6 +324,7 @@ def run_plan(plan_path: str, workdir: str) -> dict:
         print(f"  Tipo: {step_type} {'| ' + danger_label if danger_label else ''} {'| ' + cp_label if cp_label else ''}")
         print(f"{'─'*54}")
 
+        show_progress(completed, total)
         success, error, duration, error_type, status = execute_step(step, workdir)
 
         if success:

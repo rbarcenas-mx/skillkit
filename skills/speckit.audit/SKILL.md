@@ -222,9 +222,9 @@ python3 /tmp/skillkit/speckit_audit_run.py
 Generates `audit/{next_id}-{YYYYMMDD}-{HHMM}-audit.md`.
 
 2. **Final progress bar** at 100%
-3. **Summary table**: stage, verdict, criticals, warnings, observations
-4. **Consolidated critical findings** from all stages
-5. **Session file** generated
+ 3. **Summary table**: stage, verdict, criticals, warnings, observations
+ 4. **Consolidated critical findings** from all stages
+ 5. **Session file** generated
 
 ## Step 12 — Execution report
 

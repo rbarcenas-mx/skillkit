@@ -16,6 +16,24 @@ import threading
 import time
 from datetime import datetime
 
+C = {
+    'green': '\033[92m', 'red': '\033[91m', 'yellow': '\033[93m',
+    'cyan': '\033[96m', 'bold': '\033[1m',
+    'reset': '\033[0m', 'clear': '\033[K',
+}
+
+def progress_bar(done, total, label=""):
+    if total <= 0: return
+    pct = int((done / total) * 100)
+    filled = int(30 * done / total)
+    bar_filled = '\u2588' * filled
+    bar_empty = '\u2591' * (30 - filled)
+    color = C['green'] if pct == 100 else (C['yellow'] if pct > 50 else C['cyan'])
+    sys.stderr.write(f'\r{color}[{bar_filled}{bar_empty}]{C["reset"]} {C["bold"]}{pct}%{C["reset"]} ({done}/{total}) {label}{C["clear"]}')
+    sys.stderr.flush()
+    if done >= total:
+        sys.stderr.write('\n')
+
 sys.stderr.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
@@ -953,9 +971,10 @@ def main():
     if 'flow' in plan_types:
         ensure_env_limits()
 
-    for plan_type in plan_types:
+    for i, plan_type in enumerate(plan_types, 1):
+        progress_bar(i - 1, len(plan_types), plan_type)
         print(f"{'='*54}", file=sys.stderr)
-        print(f"  Plan: {plan_type}", file=sys.stderr)
+        print(f"  Plan: {plan_type} ({i}/{len(plan_types)})", file=sys.stderr)
         print(f"{'-'*54}", file=sys.stderr)
 
         p = progress if isinstance(progress, dict) else {}
@@ -1005,6 +1024,7 @@ def main():
         with open(plan_path, 'w', encoding='utf-8') as f:
             f.write(plan)
 
+        progress_bar(i, len(plan_types), plan_type)
         print(f"  Plan saved: {plan_path}", file=sys.stderr)
         generated.append((plan_type, plan))
 

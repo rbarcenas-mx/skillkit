@@ -143,19 +143,23 @@ If C: handle as needed.
 
 Loop through stages in fixed order: **spec → plan → tasks → code** (always from specification forward, never start from code).
 
-### Per-stage flow
-
-For each stage that has findings, follow this EXACT flow:
+For EACH stage that has findings, follow the sub-steps below (6.1 → 6.6) in strict sequence.
+After finishing 6.6, LOOP BACK to 6.1 for the next stage. Do NOT skip directly to solve.
+Only after the LAST stage proceed to Step 7.
 
 ```
   ╔══════════════════════════════════════════════════════╗
-  ║  1. Show stage banner + model                        ║
-  ║  2. Generate proposals (action=suggest)               ║
-  ║  3. Present findings + proposed solutions             ║
-  ║  4. Ask confirmation                                  ║
-  ║  5. If confirmed → apply (action=solve)               ║
-  ║  6. Present stage summary report                      ║
-  ║  7. Proceed to next stage                             ║
+  ║  LOOP: for each stage in [spec, plan, tasks, code]   ║
+  ║                                                      ║
+  ║  6.1 Show stage banner + model                       ║
+  ║  6.2 Generate proposals (action=suggest)              ║
+  ║  6.3 Present findings + proposed solutions            ║
+  ║  6.4 Ask confirmation                                ║
+  ║  6.5 If confirmed → apply (action=solve)              ║
+  ║  6.6 Present stage summary report                    ║
+  ║                                                      ║
+  ║  → LOOP BACK to 6.1 for next stage                   ║
+  ║  → After last stage → Step 7                         ║
   ╚══════════════════════════════════════════════════════╝
 ```
 
@@ -301,11 +305,13 @@ After execution, present (in the user's language):
 ╚══════════════════════════════════════════════════╝
 ```
 
-### Step 6.7 — Proceed to next stage
+### Step 6.7 — Loop to next stage
 
-Continue to next stage in order: spec → plan → tasks → code.
+**LOOP BACK to Step 6.1** for the next stage in order: spec → plan → tasks → code.
 
-After the last stage, proceed to Step 7 (Finalize).
+Do NOT resolve the next stage automatically. You MUST repeat steps 6.1–6.6 for each remaining stage (show banner, suggest, present, confirm, solve, summary).
+
+After the LAST stage (code), proceed to Step 7 (Finalize).
 
 ## Step 6a — Auto-resolve all stages
 

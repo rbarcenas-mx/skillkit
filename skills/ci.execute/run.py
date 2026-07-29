@@ -266,6 +266,7 @@ def main():
         if not auto_confirm:
             print(f"  ⏳ Running...", file=sys.stderr)
 
+        progress_bar(completed, total)
         t0 = time.time()
 
         try:
