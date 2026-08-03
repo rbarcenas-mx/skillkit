@@ -20,7 +20,7 @@ Variables de entorno:
 import json, subprocess, sys, os, re, glob, shutil
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, build_payload
 
 API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 _chat_url = API_URL.rstrip('/')
@@ -50,15 +50,7 @@ def read_file(path):
         return ""
 
 def run_ollama_prompt(system_prompt, user_content, model, num_predict):
-    payload = {
-        "model": model,
-        "stream": False,
-        "options": {"num_predict": num_predict},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
-        ]
-    }
+    payload = build_payload(model, system_prompt, user_content, num_predict=num_predict, stream=False)
     payload_path = '/tmp/skillkit/payload_batch.json'
     os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(payload_path, 'w', encoding='utf-8') as f:

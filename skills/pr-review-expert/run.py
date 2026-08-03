@@ -30,7 +30,7 @@ sys.stderr.reconfigure(line_buffering=True)
 sys.stdout.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, build_payload
 
 C = {
     'green': '\033[92m', 'red': '\033[91m', 'yellow': '\033[93m',
@@ -96,15 +96,7 @@ def save_progress(phase: str, total_batches: int = 0, completed_batches: int = 0
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
     api_model = os.environ.get("SKILLKIT_MODEL", model)
-    payload = {
-        "model": api_model,
-        "stream": False,
-        "options": {"num_predict": num_predict},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_msg},
-        ],
-    }
+    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
     payload_path = "/tmp/skillkit/pr_review_payload.json"
     os.makedirs("/tmp/skillkit", exist_ok=True)
     with open(payload_path, "w", encoding="utf-8") as f:

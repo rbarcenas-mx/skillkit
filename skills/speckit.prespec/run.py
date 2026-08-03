@@ -29,7 +29,7 @@ import time
 sys.stderr.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, build_payload
 
 MODEL = resolve_model("prespec")
 API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
@@ -75,15 +75,9 @@ spinner_start = 0.0
 
 def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> str:
     global spinner_start
-    payload = {
-        "model": os.environ.get("SKILLKIT_MODEL", MODEL),
-        "stream": False,
-        "options": {"num_predict": num_predict},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_msg},
-        ],
-    }
+    payload = build_payload(
+        os.environ.get("SKILLKIT_MODEL", MODEL), system_prompt, user_msg,
+        num_predict=num_predict, stream=False)
     payload_path = "/tmp/skillkit/prespec_payload.json"
     os.makedirs("/tmp/skillkit", exist_ok=True)
     with open(payload_path, "w", encoding="utf-8") as f:

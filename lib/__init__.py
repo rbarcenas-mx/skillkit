@@ -67,6 +67,37 @@ def _set_api_env(provider_cfg):
     return bool(url)
 
 
+_REASONING_MODELS = ("deepseek", "kimi", "glm", "qwen")
+
+
+def build_payload(model, system_prompt, user_msg, num_predict=2048, stream=False):
+    """Build a chat payload for Ollama (options.num_predict) or OpenAI-style
+    gateways (max_tokens).
+
+    The remote gateway rejects Ollama's `options` field with HTTP 400, so it is
+    only sent when the provider is local ollama. Models with visible reasoning
+    (deepseek-*, kimi-*, glm-*, qwen-*) otherwise burn their whole output budget
+    on reasoning_content and return an empty content, so they get
+    `reasoning_effort: "none"` to force a direct final answer. mimo-* rejects
+    that field, so it is not sent for it.
+    """
+    payload = {
+        "model": model,
+        "stream": stream,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_msg},
+        ],
+    }
+    if os.environ.get("SKILLKIT_PROVIDER") == "ollama":
+        payload["options"] = {"num_predict": num_predict}
+    else:
+        payload["max_tokens"] = num_predict
+        if any(t in str(model).lower() for t in _REASONING_MODELS):
+            payload["reasoning_effort"] = "none"
+    return payload
+
+
 def _ollama_models_available():
     try:
         result = subprocess.run(

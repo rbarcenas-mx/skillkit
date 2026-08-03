@@ -27,7 +27,7 @@ sys.stderr.reconfigure(line_buffering=True)
 from datetime import datetime
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, build_payload
 
 LOG_BUF = []
 
@@ -130,14 +130,7 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
     resolve_model(skill_name)
     api_model = os.environ.get("SKILLKIT_MODEL", "")
 
-    payload = {
-        "model": api_model, "stream": False,
-        "options": {"num_predict": num_predict},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_msg},
-        ],
-    }
+    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
     pfile = '/tmp/skillkit/audit_resolve_payload.json'
     os.makedirs('/tmp/skillkit', exist_ok=True)
     with open(pfile, 'w') as f:

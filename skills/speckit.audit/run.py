@@ -29,7 +29,7 @@ sys.stderr.reconfigure(line_buffering=True)
 from datetime import datetime
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, build_payload
 
 NUM_PREDICT = {'spec': 2048, 'plan': 2048, 'tasks': 2048, 'codigo': 2048}
 
@@ -209,14 +209,7 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
                label: str = "Auditando") -> str:
     # Usar SKILLKIT_MODEL si esta disponible
     api_model = os.environ.get("SKILLKIT_MODEL", model)
-    payload = {
-        "model": api_model, "stream": False,
-        "options": {"num_predict": num_predict},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_msg},
-        ],
-    }
+    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
     prompt_chars = len(user_msg) + len(system_prompt)
     log(f"  ▶ Payload: {prompt_chars:,} chars, modelo={api_model}")
 
@@ -277,7 +270,7 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
 
 SYS_SPEC = """Eres un auditor senior de producto. Revisa la especificacion.
 
-IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/spec.md`). No inventes rutas de archivos.
 
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Especificacion
@@ -285,13 +278,13 @@ Responde EXACTAMENTE:
 ## Resumen Ejecutivo
 
 ## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Seccion afectada**: ..., **Accion requerida**: ...
+**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
 
 ## Advertencias
-**ID**: W1, **Descripcion**: ..., **Accion sugerida**: ...
+**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
 
 ## Observaciones
-**ID**: O1, **Descripcion**: ..., **Beneficio**: ...
+**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
 
 ## Veredicto
 APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
@@ -302,7 +295,7 @@ Responde solo en espanol."""
 
 SYS_PLAN = """Eres un auditor senior de arquitectura. Revisa el plan tecnico.
 
-IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/plan.md`). No inventes rutas de archivos.
 
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Plan Tecnico
@@ -310,12 +303,13 @@ Responde EXACTAMENTE:
 ## Resumen Ejecutivo
 
 ## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Artefacto**: ..., **Accion requerida**: ...
+**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
 
 ## Advertencias
-**ID**: W1, **Descripcion**: ..., **Accion sugerida**: ...
+**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
 
 ## Observaciones
+**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
 
 ## Veredicto
 APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
@@ -325,7 +319,7 @@ Responde solo en espanol."""
 
 SYS_TASKS = """Eres un auditor senior de ingenieria. Revisa las tareas.
 
-IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
+IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/tasks.md`). No inventes rutas de archivos.
 
 Responde EXACTAMENTE:
 # Reporte de Auditoria — Tareas
@@ -333,11 +327,13 @@ Responde EXACTAMENTE:
 ## Resumen Ejecutivo
 
 ## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Tarea afectada**: ..., **Accion requerida**: ...
+**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
 
 ## Advertencias
+**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
 
 ## Observaciones
+**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
 
 ## Veredicto
 APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
@@ -494,7 +490,8 @@ def audit_stage_full(workdir: str, feature: str, stage: str, model: str) -> dict
         content = read_file(os.path.join(base, art))
         if content:
             log(f"  ▶ {art}: {len(content):,} chars")
-            parts.append(f"=== {art.upper()} ===\n{content}")
+            rel = os.path.relpath(os.path.join(base, art), workdir)
+            parts.append(f"=== {art.upper()} ({rel}) ===\n{content}")
 
     context = '\n\n'.join(parts)
     log(f"  ▶ Contexto total: {len(context):,} chars — enviando a auditar...")

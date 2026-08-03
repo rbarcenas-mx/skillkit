@@ -8,7 +8,7 @@ from unittest.mock import patch
 os.environ.setdefault("SKILLKIT_HOME", os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 
-from lib import _build_chain, _model_available, _resolve_budget, resolve_model
+from lib import _build_chain, _model_available, _resolve_budget, build_payload, resolve_model
 
 
 def _clean_path(raw: str) -> str:
@@ -220,6 +220,39 @@ class TestResolveModel:
             resolve_model("prespec", budget="low")
         original_low = SAMPLE_CATALOG["skill_mapping"]["prespec"]["low"]
         assert original_low == "gemma4:26b", f"Catalog mutated to {original_low}"
+
+
+# ── build_payload ─────────────────────────────────────────────
+
+
+class TestBuildPayload:
+    def _build(self, provider, model):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = provider
+        return build_payload(model, "SYS", "USR", num_predict=2048)
+
+    def test_ollama_uses_options(self):
+        p = self._build("ollama", "gemma4:26b")
+        assert p["options"] == {"num_predict": 2048}
+        assert "max_tokens" not in p
+
+    def test_remote_uses_max_tokens(self):
+        p = self._build("opencode-go", "deepseek-v4-flash")
+        assert p["max_tokens"] == 2048
+        assert "options" not in p
+        assert p["reasoning_effort"] == "none"
+
+    def test_remote_non_reasoning_model_no_reasoning_effort(self):
+        p = self._build("opencode-go", "mimo-v2.5")
+        assert p["max_tokens"] == 2048
+        assert "options" not in p
+        assert "reasoning_effort" not in p
+
+    def test_kimi_gets_no_reasoning(self):
+        p = self._build("opencode-go", "kimi-k2.7-code")
+        assert p["max_tokens"] == 2048
+        assert "options" not in p
+        assert p["reasoning_effort"] == "none"
 
 
 # ── _clean_path ───────────────────────────────────────────────
