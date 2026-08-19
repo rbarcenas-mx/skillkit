@@ -21,7 +21,6 @@ Output: JSON with structured review (findings, checklist, verdict).
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -30,7 +29,7 @@ sys.stderr.reconfigure(line_buffering=True)
 sys.stdout.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 C = {
     'green': '\033[92m', 'red': '\033[91m', 'yellow': '\033[93m',
@@ -96,48 +95,14 @@ def save_progress(phase: str, total_batches: int = 0, completed_batches: int = 0
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
     api_model = os.environ.get("SKILLKIT_MODEL", model)
-    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
-    payload_path = "/tmp/skillkit/pr_review_payload.json"
-    os.makedirs("/tmp/skillkit", exist_ok=True)
-    with open(payload_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
-
-    try:
-        headers = ["-H", "Content-Type: application/json"]
-        if API_KEY:
-            headers += ["-H", f"Authorization: Bearer {API_KEY}"]
-        url = API_URL.rstrip('/')
-        if not url.endswith('/chat/completions'):
-            url += '/chat/completions'
-        result = subprocess.run(
-            ["curl", "-s", "-X", "POST", url,
-             *headers, "-d", "@" + payload_path],
-            capture_output=True, text=True, timeout=TIMEOUT,
-        )
-        if result.returncode != 0:
-            return f"ERROR curl: {result.stderr}", {}
-        if not result.stdout.strip():
-            return "ERROR: empty response", {}
-        resp = json.loads(result.stdout)
-        choices = resp.get("choices", [])
-        if choices:
-            content = choices[0]["message"]["content"]
-        else:
-            content = resp.get("message", {}).get("content", "")
-        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
-        usage = resp.get("usage", {})
-        return content.strip(), usage
-    except Exception as e:
-        return f"ERROR: {e}", {}
+    result = call_model(
+        api_model, system_prompt, user_msg,
+        num_predict=num_predict, response_format="json", timeout=TIMEOUT,
+    )
+    return result["content"], result["usage"]
 
 
 def extract_json(text: str) -> dict:
-    m = re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
     try:
         return json.loads(text)
     except json.JSONDecodeError:
