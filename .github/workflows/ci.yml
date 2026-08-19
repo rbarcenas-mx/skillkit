@@ -29,12 +29,13 @@ jobs:
         run: bash -n install.sh
 
       - name: Verify syntax (Python files)
-        run: python3 -c "
-import ast, os
-for root, dirs, files in os.walk('.'):
-    dirs[:] = [d for d in dirs if d.startswith('.') or d == '__pycache__']
-    for f in files:
-        if f.endswith('.py'):
-            ast.parse(open(os.path.join(root, f)).read())
-print('All Python files: OK')
-"
+        run: |
+          python3 -c '
+          import ast, os
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d.startswith(".") or d == "__pycache__"]
+              for f in files:
+                  if f.endswith(".py"):
+                      ast.parse(open(os.path.join(root, f)).read())
+          print("All Python files: OK")
+          '
