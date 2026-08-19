@@ -210,8 +210,8 @@
   "ci.ship": {
    "task": "Pre-push validation, review coordination, push and CI monitoring",
    "low": "gemma4:26b",
-   "medium": "opencode-go/mimo-v2.5-pro",
-   "high": "opencode-go/deepseek-v4-flash"
+   "medium": "opencode-go/mimo-v2.5",
+   "high": "opencode-go/mimo-v2.5-pro"
   }
  }
 }
