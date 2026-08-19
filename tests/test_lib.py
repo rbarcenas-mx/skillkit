@@ -1,14 +1,15 @@
 """Tests for lib/__init__.py and shared utilities."""
 
+import json
 import os
 import re
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("SKILLKIT_HOME", os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 
-from lib import _build_chain, _model_available, _resolve_budget, build_payload, resolve_model
+from lib import _build_chain, _model_available, _resolve_budget, build_payload, call_model, resolve_model
 
 
 def _clean_path(raw: str) -> str:
@@ -236,23 +237,38 @@ class TestBuildPayload:
         assert p["options"] == {"num_predict": 2048}
         assert "max_tokens" not in p
 
-    def test_remote_uses_max_tokens(self):
+    def test_remote_reasoning_model_gets_larger_budget(self):
         p = self._build("opencode-go", "deepseek-v4-flash")
-        assert p["max_tokens"] == 2048
+        assert p["max_tokens"] == 65536
         assert "options" not in p
-        assert p["reasoning_effort"] == "none"
 
-    def test_remote_non_reasoning_model_no_reasoning_effort(self):
+    def test_remote_non_reasoning_model_keeps_caller_cap(self):
         p = self._build("opencode-go", "mimo-v2.5")
         assert p["max_tokens"] == 2048
         assert "options" not in p
-        assert "reasoning_effort" not in p
 
-    def test_kimi_gets_no_reasoning(self):
+    def test_kimi_gets_larger_budget(self):
         p = self._build("opencode-go", "kimi-k2.7-code")
-        assert p["max_tokens"] == 2048
+        assert p["max_tokens"] == 65536
         assert "options" not in p
-        assert p["reasoning_effort"] == "none"
+
+    def test_remote_json_response_format(self):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        p = build_payload("mimo-v2.5", "SYS", "USR", num_predict=2048, response_format="json")
+        assert p["response_format"] == {"type": "json_object"}
+
+    def test_ollama_json_format(self):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "ollama"
+        p = build_payload("gemma4:26b", "SYS", "USR", num_predict=2048, response_format="json")
+        assert p["format"] == "json"
+
+    def test_no_response_format_by_default(self):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        p = build_payload("mimo-v2.5", "SYS", "USR")
+        assert "response_format" not in p
 
 
 # ── _clean_path ───────────────────────────────────────────────
@@ -290,3 +306,95 @@ class TestCleanPath:
     def test_only_punctuation(self):
         assert _clean_path("''") == ""
         assert _clean_path("```") == ""
+
+
+# ── call_model ─────────────────────────────────────────────────
+
+
+class TestCallModel:
+    @patch("lib.subprocess.run")
+    def test_parses_content_and_usage(self, mock_run):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=json.dumps({
+                "choices": [{"message": {"content": "hello"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 2},
+            }),
+            stderr="",
+        )
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["content"] == "hello"
+        assert result["usage"]["completion_tokens"] == 2
+        assert result["error"] is None
+        assert not result["truncated"]
+        assert not result["empty"]
+
+    @patch("lib.subprocess.run")
+    def test_strips_thinking_tags(self, mock_run):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=json.dumps({
+                "choices": [{"message": {"content": "<think>reasoning</think>answer"}, "finish_reason": "stop"}],
+            }),
+            stderr="",
+        )
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["content"] == "answer"
+
+    @patch("lib.subprocess.run")
+    def test_detects_truncation(self, mock_run, capsys):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=json.dumps({
+                "choices": [{"message": {"content": "partial"}, "finish_reason": "length"}],
+            }),
+            stderr="",
+        )
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["truncated"]
+        captured = capsys.readouterr()
+        assert "truncated" in captured.err
+
+    @patch("lib.subprocess.run")
+    def test_detects_empty_content(self, mock_run, capsys):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=json.dumps({
+                "choices": [{"message": {"content": "   "}, "finish_reason": "stop"}],
+            }),
+            stderr="",
+        )
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["empty"]
+        captured = capsys.readouterr()
+        assert "empty" in captured.err
+
+    @patch("lib.subprocess.run")
+    def test_curl_error(self, mock_run):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(returncode=7, stdout="", stderr="connection refused")
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["error"] == "curl_error"
+        assert result["content"].startswith("ERROR curl:")
+
+    @patch("lib.subprocess.run")
+    def test_api_error(self, mock_run):
+        clean_env()
+        os.environ["SKILLKIT_PROVIDER"] = "opencode-go"
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=json.dumps({"error": {"message": "bad request"}}),
+            stderr="",
+        )
+        result = call_model("mimo-v2.5", "SYS", "USR")
+        assert result["error"] == "api_error"
+        assert "bad request" in result["content"]
