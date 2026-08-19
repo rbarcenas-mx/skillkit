@@ -10,7 +10,6 @@ If multiple types, also generates suite_plan.md.
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -23,7 +22,8 @@ C = {
 }
 
 def progress_bar(done, total, label=""):
-    if total <= 0: return
+    if total <= 0:
+        return
     pct = int((done / total) * 100)
     filled = int(30 * done / total)
     bar_filled = '\u2588' * filled
@@ -61,7 +61,7 @@ def print_model_banner(task_desc):
     provider = os.environ.get("SKILLKIT_PROVIDER", "?")
     desc = os.environ.get("SKILLKIT_MODEL_DESC", "")
     sys.stderr.write(f"\n{'='*54}\n")
-    sys.stderr.write(f"  Model Router\n")
+    sys.stderr.write("  Model Router\n")
     sys.stderr.write(f"{'-'*54}\n")
     sys.stderr.write(f"  Mode:     {mode_label}\n")
     sys.stderr.write(f"  Model:    {model} ({provider})\n")
@@ -102,13 +102,13 @@ def spinner_while_waiting(stop_event, label="Processing"):
         i += 1
         time.sleep(0.15)
     elapsed = time.time() - t0
-    sys.stderr.write(f'\r  {"\u2705"} {label} — completed in {elapsed:.1f}s   \n')
+    sys.stderr.write(f'\r  {"✅"} {label} — completed in {elapsed:.1f}s   \n')
     sys.stderr.flush()
 
 def get_api_key():
     return os.environ.get("SKILLKIT_API_KEY", "")
 
-def call_model(system_prompt, user_message):
+def _qa_call_model(system_prompt, user_message):
     model = os.environ.get("SKILLKIT_MODEL")
     if not model:
         resolve_model("qa.prepare")
@@ -206,8 +206,8 @@ def validate_plan(plan_text, plan_type):
                         steps.append(step)
                 except yaml.YAMLError as e:
                     sid = 'unknown'
-                    for l in current_lines[:5]:
-                        m = re.match(r'id:\s*(\S+)', l)
+                    for line in current_lines[:5]:
+                        m = re.match(r'id:\s*(\S+)', line)
                         if m:
                             sid = m.group(1)
                             break
@@ -227,8 +227,8 @@ def validate_plan(plan_text, plan_type):
                             steps.append(step)
                     except yaml.YAMLError as e:
                         sid = 'unknown'
-                        for l in current_lines[:5]:
-                            m = re.match(r'id:\s*(\S+)', l)
+                        for line in current_lines[:5]:
+                            m = re.match(r'id:\s*(\S+)', line)
                             if m:
                                 sid = m.group(1)
                                 break
@@ -522,7 +522,7 @@ def ensure_env_limits():
     if changes:
         with open(env_path, 'w') as f:
             f.writelines(new_lines)
-        print(f"  .env.qa updated:", file=sys.stderr)
+        print("  .env.qa updated:", file=sys.stderr)
         for c in changes:
             print(f"    -> {c}", file=sys.stderr)
         defaults_api = defaults.get('api', (None, 100, 15*60*1000))
@@ -734,7 +734,7 @@ def generate_flow_plan_from_templates(next_id):
     )
 
     plan = header + '\n'.join(parts)
-    plan += f"\n## Execution Log\n\n(Sin registros)\n"
+    plan += "\n## Execution Log\n\n(Sin registros)\n"
 
     plan = ensure_rate_limit_capacity(plan)
 
@@ -758,7 +758,7 @@ def generate_plan(plan_type, existing_str, next_id):
     try:
         ctx = json.loads(QA_PROJECT_CONTEXT) if isinstance(QA_PROJECT_CONTEXT, str) else QA_PROJECT_CONTEXT
         ctx_str = json.dumps(ctx, indent=2, ensure_ascii=False)[:8000]
-    except:
+    except Exception:
         ctx_str = str(QA_PROJECT_CONTEXT)[:8000]
 
     stress_desc = STRESS_CONFIG.get(QA_STRESS_LEVEL, STRESS_CONFIG['medio'])
@@ -802,7 +802,7 @@ def generate_plan(plan_type, existing_str, next_id):
     )
     spinner_thread.start()
     try:
-        plan = call_model(system_prompt, user_message)
+        plan = _qa_call_model(system_prompt, user_message)
     finally:
         stop_spinner.set()
         spinner_thread.join()
@@ -827,7 +827,7 @@ def generate_plan(plan_type, existing_str, next_id):
         )
         spinner_thread.start()
         try:
-            plan = call_model(correction_prompt, user_message)
+            plan = _qa_call_model(correction_prompt, user_message)
         finally:
             stop_spinner.set()
             spinner_thread.join()
@@ -839,7 +839,7 @@ def generate_plan(plan_type, existing_str, next_id):
                 for e in errors2[:3]:
                     print(f"    -> {e}", file=sys.stderr)
             else:
-                print(f"  Plan validated successfully", file=sys.stderr)
+                print("  Plan validated successfully", file=sys.stderr)
 
     return plan
 
@@ -990,7 +990,7 @@ def main():
 
     if len(generated) > 1:
         print(f"\n{'='*50}", file=sys.stderr)
-        print(f"  Generating suite plan...", file=sys.stderr)
+        print("  Generating suite plan...", file=sys.stderr)
         suite_text = generate_suite([pt for pt, _ in generated], next_id, timestamp)
         suite_name = f'{next_id:03d}_{timestamp}_suite_plan.md'
         suite_path = os.path.join(plan_dir, suite_name)
@@ -1007,7 +1007,7 @@ def main():
     local_output = n * 2000
 
     print(f"\n{'='*54}", file=sys.stderr)
-    print(f"  Preparation completed", file=sys.stderr)
+    print("  Preparation completed", file=sys.stderr)
     print(f"{'-'*54}", file=sys.stderr)
     print(f"  Plans generated: {len(generated)}", file=sys.stderr)
     for pt, _ in generated:

@@ -186,7 +186,7 @@ def main():
             print(json.dumps({"status": "error", "message": "Refine mode needs USER_DECISIONS"}))
             sys.exit(1)
 
-        log(f"  Mode: refinement")
+        log("  Mode: refinement")
         log(f"  Existing doc: {len(existing_doc)} chars")
         log(f"  Decisions:    {len(user_decisions)} chars")
 
@@ -223,7 +223,7 @@ def main():
             print(json.dumps({"status": "error", "message": "Idea content is empty."}))
             sys.exit(1)
 
-        log(f"  Mode: initial analysis")
+        log("  Mode: initial analysis")
         log(f"  Sending to {MODEL} (analysis)...")
         save_progress(1, "running")
         content = run_ollama(INITIAL_PROMPT, f"## Idea to Analyze\n\n{idea_content}", num_predict=8192)

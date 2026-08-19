@@ -6,14 +6,10 @@ Modo normal: ejecuta un plan individual.
 Modo suite: ejecuta una secuencia de planes con dependencias y teardown.
 """
 
-import json
 import os
 import re
 import subprocess
 import sys
-import time
-from datetime import datetime, timezone
-from typing import Optional
 
 sys.stderr.reconfigure(line_buffering=True)
 
@@ -23,7 +19,7 @@ from lib.checkpoint import (
     append_log, format_success, format_failure, format_skip,
     write_summary, read_exec_log
 )
-from lib.decision import decide, ask_model, RETRY, SKIP, ABORT
+from lib.decision import decide, ask_model, RETRY, SKIP
 from lib.recovery import ensure_docker
 
 import importlib.util
@@ -54,7 +50,7 @@ def print_model_banner():
     justificacion = MODELO_JUSTIFICACION.get(modo_raw, "")
     es_local = provider == "ollama"
     sys.stderr.write(f"\n{'='*54}\n")
-    sys.stderr.write(f"  Modelo de Orquestacion\n")
+    sys.stderr.write("  Modelo de Orquestacion\n")
     sys.stderr.write(f"{'─'*54}\n")
     sys.stderr.write(f"  Modo:       {modo_label}\n")
     sys.stderr.write(f"  Modelo:     {modelo} ({provider})\n")
@@ -114,7 +110,7 @@ def print_token_table(total_plans):
     sys.stderr.write(f"  {'% Local':<30} {pct_local:>11}%\n")
     if not es_local:
         sys.stderr.write(f"\n  Nota: Modo {modo_label} usa modelo remoto ({os.environ.get('SKILLKIT_MODEL', '?')}).\n")
-        sys.stderr.write(f"  En modo Low estas tareas serian locales ($0) via Ollama.\n")
+        sys.stderr.write("  En modo Low estas tareas serian locales ($0) via Ollama.\n")
     sys.stderr.write(f"{'='*54}\n")
 
 
@@ -292,7 +288,7 @@ def run_plan(plan_path: str, workdir: str) -> dict:
         print(f"\n{'='*54}")
         print(f"  🐳 Pre-flight: {len(docker_steps)} pasos requieren Docker — verificando disponibilidad")
         if not ensure_docker():
-            print(f"  ⚠️  Docker no disponible — los pasos Docker pueden fallar")
+            print("  ⚠️  Docker no disponible — los pasos Docker pueden fallar")
 
     for step in steps:
         sid = step.get('id', 'UNKNOWN')
@@ -339,9 +335,9 @@ def run_plan(plan_path: str, workdir: str) -> dict:
 
             # Auto-recovery: si es error de Docker
             if 'docker' in error.lower() or 'daemon' in error.lower():
-                print(f"  🐳 Error de Docker detectado — intentando recuperacion...")
+                print("  🐳 Error de Docker detectado — intentando recuperacion...")
                 if ensure_docker():
-                    print(f"  🔄 Recovery exitoso — reintentando paso...")
+                    print("  🔄 Recovery exitoso — reintentando paso...")
                     success2, error2, duration2, _, _ = execute_step(step, workdir)
                     if success2:
                         log_success(sid, desc, duration2, is_checkpoint, plan_path)
@@ -351,7 +347,7 @@ def run_plan(plan_path: str, workdir: str) -> dict:
                         print(f"  ✅ Paso completado en {duration2:.1f}s (post-recovery)")
                         continue
                     else:
-                        print(f"  ❌ Recovery fallo")
+                        print("  ❌ Recovery fallo")
 
             log_failure(sid, desc, duration, error, plan_path)
 
@@ -373,15 +369,15 @@ def run_plan(plan_path: str, workdir: str) -> dict:
                     show_progress(completed, total)
                     print(f"  ✅ Paso completado en {duration2:.1f}s (reintento)")
                 else:
-                    print(f"  ❌ Reintento fallo — saltando paso")
+                    print("  ❌ Reintento fallo — saltando paso")
                     log_skip(sid, desc, plan_path)
                     skipped += 1
             elif decision == SKIP:
                 log_skip(sid, desc, plan_path)
                 skipped += 1
-                print(f"  ⏭️  Decision: SKIP — omitiendo paso")
+                print("  ⏭️  Decision: SKIP — omitiendo paso")
             else:  # ABORT
-                print(f"  🛑 Decision: ABORT — deteniendo ejecucion")
+                print("  🛑 Decision: ABORT — deteniendo ejecucion")
                 break
 
     # Resumen del plan
@@ -457,10 +453,8 @@ def run_suite(suite_path: str, workdir: str) -> None:
                     break
             else:
                 # Dependencia por nombre (ej: 'infra' -> buscar plan con 'infra' en nombre)
-                found = False
                 for k, v in plan_results.items():
                     if dep.lower() in k.lower():
-                        found = True
                         if v['failed'] > 0:
                             print(f"\n⚠️  Dependencia fallida: {k}. Saltando {plan_name}.")
                             deps_ok = False
@@ -489,7 +483,7 @@ def run_suite(suite_path: str, workdir: str) -> None:
     # Teardown
     if teardown_steps:
         print(f"\n{'='*54}")
-        print(f"  🧹 Teardown — limpiando infraestructura")
+        print("  🧹 Teardown — limpiando infraestructura")
         print(f"{'─'*54}")
         for td in teardown_steps:
             cmd = td.get('comando', '')
@@ -499,7 +493,7 @@ def run_suite(suite_path: str, workdir: str) -> None:
                     result = subprocess.run(cmd, shell=True, capture_output=True,
                                             text=True, timeout=60, cwd=workdir)
                     if result.returncode == 0:
-                        print(f"  ✅ Teardown completado")
+                        print("  ✅ Teardown completado")
                     else:
                         print(f"  ⚠️  Teardown: {result.stderr[:200]}")
                 except Exception as e:
@@ -509,7 +503,7 @@ def run_suite(suite_path: str, workdir: str) -> None:
     total_with_fails = sum(1 for r in plan_results.values() if r.get('failed', 0) > 0)
     total_ok = len(plan_results) - total_with_fails
     print(f"\n{'#'*54}", flush=True)
-    print(f"# Resumen Consolidado de Suite", flush=True)
+    print("# Resumen Consolidado de Suite", flush=True)
     print(f"{'─'*54}", flush=True)
     print(f"  Total planes:    {len(plans)}", flush=True)
     print(f"  Planes OK:       {total_ok}  ✅", flush=True)

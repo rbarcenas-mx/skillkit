@@ -19,7 +19,6 @@ import json
 import os
 import re
 import sys
-import threading
 import time
 
 sys.stderr.reconfigure(line_buffering=True)
@@ -171,7 +170,6 @@ def extract_checkpoint_findings(cp_dir: str, workdir: str = "") -> list[dict]:
 
         # Extraer metadatos del checkpoint
         title_m = re.search(r'# Checkpoint:\s*(.+)', content)
-        fecha_m = re.search(r'\*\*Fecha\*\*:\s*(.+)', content)
         veredicto_m = re.search(r'\*\*Veredicto\*\*:\s*(.+)', content)
         criticos_m = re.search(r'\*\*Criticos\*\*:\s*(\d+)', content)
 
@@ -292,7 +290,7 @@ def diagnose(workdir: str) -> dict:
     lines = [
         f"# Resolve: {audit_id}",
         f"**Audit**: {audit_ts}",
-        f"**Solucion**: (pendiente)",
+        "**Solucion**: (pendiente)",
         "",
     ]
 
@@ -382,13 +380,11 @@ def resolve_finding(workdir: str, finding: dict, idx: int, action: str = "solve"
     # Leer contexto del archivo afectado
     context = ""
     archivo = finding.get('archivo', '')
-    archivo_valido = False
     if archivo:
         fname = archivo.split('`')[0].strip() if '`' in archivo else archivo
         fpath = os.path.join(workdir, fname)
         raw = read_file(fpath)
         if raw:
-            archivo_valido = True
             if len(raw) > 3000:
                 context = raw[:1500] + "\n... [truncado] ...\n" + raw[-1500:]
             else:
@@ -485,8 +481,6 @@ def apply_suggestion(workdir: str, suggestion: str, finding: dict = None) -> dic
     #   - old line
     #   + new line
     lines = diff_text.split('\n')
-    old_lines = []
-    new_lines = []
     i = 0
     changes = 0
 
@@ -827,7 +821,7 @@ def verify_timestamps(workdir: str, resolve_content: str, target_ts: str) -> dic
     if ts_epoch <= max_mtime and max_mtime > 0:
         # El timestamp es menor o igual que algun mtime → ajustar
         log(f"  ⚠️  Timestamp {target_ts} <= max mtime {max_mtime_str} de archivos")
-        log(f"  Ajustando timestamp...")
+        log("  Ajustando timestamp...")
         # Usar max_mtime + 1 segundo para garantizar que sea estrictamente mayor
         new_epoch = max_mtime + 2
         new_ts = datetime.fromtimestamp(new_epoch).strftime('%Y-%m-%dT%H:%M:%S')
@@ -857,7 +851,7 @@ def finalize(workdir: str) -> dict:
     ts = verify_result["timestamp"]
 
     if verify_result.get("adjusted"):
-        log(f"  Timestamp ajustado para ser > mtime de archivos modificados")
+        log("  Timestamp ajustado para ser > mtime de archivos modificados")
     log(f"  Archivos referenciados: {len(verify_result.get('archivos', []))}")
     if verify_result.get("archivos"):
         for a in verify_result["archivos"]:

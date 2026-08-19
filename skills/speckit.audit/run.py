@@ -45,7 +45,7 @@ def print_model_banner(stage, tarea_desc):
     modelo = os.environ.get("SKILLKIT_MODEL", "?")
     provider = os.environ.get("SKILLKIT_PROVIDER", "?")
     sys.stderr.write(f"\n{'='*54}\n")
-    sys.stderr.write(f"  \U0001f9e0 Model Router\n")
+    sys.stderr.write("  \U0001f9e0 Model Router\n")
     sys.stderr.write(f"{'─'*54}\n")
     sys.stderr.write(f"  Modo:     {modo_label} — {modo_explicacion}\n")
     sys.stderr.write(f"  Modelo:   {modelo} ({provider})\n")
@@ -308,7 +308,7 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
         spinner_thread.join()
 
     if result["truncated"]:
-        log(f"  ❌ Respuesta truncada (finish_reason=length). Reintenta con max_tokens mayor.")
+        log("  ❌ Respuesta truncada (finish_reason=length). Reintenta con max_tokens mayor.")
         return "ERROR: respuesta truncada (finish_reason=length)"
     if result["error"]:
         log(f"  ❌ Model error: {result['content'][:200]}")
@@ -382,7 +382,7 @@ def prepare_manifest(workdir: str) -> dict:
     skip_dirs = {'node_modules', '.git', 'dist', 'build', '.specify',
                  '.opencode', 'audit', 'coverage', '.next', '.cache', 'tmp'}
 
-    layer_files = {l: [] for l in layer_dirs}
+    layer_files = {layer: [] for layer in layer_dirs}
     layer_files['other'] = []
 
     for root, dirs, files in os.walk(workdir):
@@ -607,7 +607,8 @@ def main():
     consolidate_input = os.environ.get('AUDIT_CONSOLIDATE', '')
     model_override = os.environ.get('AUDIT_MODEL', '')
 
-    err = lambda msg: print(json.dumps({"status": "error", "message": msg}))
+    def err(msg):
+        print(json.dumps({"status": "error", "message": msg}))
 
     # Modo consolidate: genera archivo de sesion a partir de checkpoints existentes
     if consolidate_input:
@@ -618,11 +619,14 @@ def main():
         return
 
     if not feature:
-        err("AUDIT_FEATURE es obligatorio"); sys.exit(1)
+        err("AUDIT_FEATURE es obligatorio")
+        sys.exit(1)
     if not stage:
-        err("AUDIT_STAGE es obligatorio"); sys.exit(1)
+        err("AUDIT_STAGE es obligatorio")
+        sys.exit(1)
     if stage not in ('spec', 'plan', 'tasks', 'codigo', 'lint'):
-        err(f"Etapa invalida: {stage}"); sys.exit(1)
+        err(f"Etapa invalida: {stage}")
+        sys.exit(1)
 
     mc = {"ok": True}
     if not mc['ok']:

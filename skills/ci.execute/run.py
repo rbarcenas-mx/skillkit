@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """ci.execute — Execute a CI integration plan step by step with checkpoint and progress bar."""
 
-import json, subprocess, sys, os, re, time
+import json
+import subprocess
+import sys
+import os
+import re
+import time
 from datetime import datetime, timezone
 
 sys.stderr.reconfigure(line_buffering=True)
@@ -202,10 +207,8 @@ def main():
     missing = validate_gitignore()
     if missing:
         print(f"  ⚠️  .gitignore missing patterns: {', '.join(missing)}", file=sys.stderr)
-        print(f"  Recommended to add them before continuing.", file=sys.stderr)
+        print("  Recommended to add them before continuing.", file=sys.stderr)
         print(f"{'─'*50}", file=sys.stderr)
-
-    cp = load_checkpoint()
 
     for task in tasks:
         tid = task['id']
@@ -239,7 +242,7 @@ def main():
         print(f"\n{'═'*50}", file=sys.stderr)
         print(f"  {tid}: {task['desc']} {danger_label}", file=sys.stderr)
         print(f"  {checkpoint_label}  |  {deps_label}", file=sys.stderr)
-        print(f"  Command:", file=sys.stderr)
+        print("  Command:", file=sys.stderr)
         for line in task['command'].strip().split('\n'):
             print(f"    {line.strip()}", file=sys.stderr)
         if task['rollback'] and task['rollback'] != 'N/A':
@@ -251,20 +254,20 @@ def main():
 
         # Mandatory confirmation before git push
         if 'git push' in task['command'] and not auto_confirm:
-            print(f"  🚀 This task contains 'git push'.", file=sys.stderr)
-            print(f"  Push to remote? (y/N): ", end='', flush=True, file=sys.stderr)
+            print("  🚀 This task contains 'git push'.", file=sys.stderr)
+            print("  Push to remote? (y/N): ", end='', flush=True, file=sys.stderr)
             try:
                 answer = sys.stdin.readline().strip().lower()
             except (EOFError, KeyboardInterrupt):
                 answer = 'n'
             if answer != 'y':
-                print(f"  ⏭️  Push cancelled by user.", file=sys.stderr)
+                print("  ⏭️  Push cancelled by user.", file=sys.stderr)
                 log_skip(tid, task['desc'] + ' (push cancelled)')
                 skipped += 1
                 continue
 
         if not auto_confirm:
-            print(f"  ⏳ Running...", file=sys.stderr)
+            print("  ⏳ Running...", file=sys.stderr)
 
         progress_bar(completed, total)
         t0 = time.time()
@@ -295,13 +298,13 @@ def main():
                 log_failure(tid, task['desc'], duration, error_msg)
                 failed += 1
                 print(f"\n  ❌ Failed (exit={result.returncode}): {error_msg[:200]}", file=sys.stderr)
-                print(f"  The failure has been logged. Fix the error and re-run ci.execute.", file=sys.stderr)
+                print("  The failure has been logged. Fix the error and re-run ci.execute.", file=sys.stderr)
 
         except subprocess.TimeoutExpired:
             duration = time.time() - t0
             log_failure(tid, task['desc'], duration, "TIMEOUT")
             failed += 1
-            print(f"  ❌ Timeout (>300s)", file=sys.stderr)
+            print("  ❌ Timeout (>300s)", file=sys.stderr)
 
     # ── Final summary ──────────────────────────────────────
     print(f"\n{'═'*50}", file=sys.stderr)

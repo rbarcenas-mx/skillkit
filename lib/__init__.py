@@ -303,7 +303,7 @@ def resolve_model(skill_name, budget=None):
     catalog = _load_models()
     if catalog is None:
         current = os.environ.get("SKILLKIT_MODEL", "unknown")
-        print(f"WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
+        print("WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
         print(f"  Keeping current model: {current}", file=sys.stderr)
         os.environ["SKILLKIT_MODE"] = budget + "(no_catalog)"
         return current
@@ -352,7 +352,7 @@ def resolve_model_by_id(model_id, budget, catalog=None):
         catalog = _load_models()
     if catalog is None:
         current = os.environ.get("SKILLKIT_MODEL", "unknown")
-        print(f"WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
+        print("WARNING: Cannot load model catalog from SKILLKIT_HOME/lib/models.json", file=sys.stderr)
         print(f"  Keeping current model: {current}", file=sys.stderr)
         return current
 

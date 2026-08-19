@@ -4,7 +4,6 @@ import os
 import re
 import subprocess
 import time
-from typing import Any, Optional
 
 from lib.recovery import ensure_docker
 
@@ -60,9 +59,9 @@ def execute(step: dict, workdir: str, context: dict) -> ShellResult:
 
         # Auto-recovery si es error de Docker
         if any(kw in error_msg.lower() for kw in ['docker', 'daemon', 'cannot connect']):
-            print(f"  🐳 Detectado error de Docker. Intentando recuperacion...")
+            print("  🐳 Detectado error de Docker. Intentando recuperacion...")
             if ensure_docker():
-                print(f"  🔄 Reintentando (post-recovery)...")
+                print("  🔄 Reintentando (post-recovery)...")
                 t0 = time.time()
                 result = subprocess.run(
                     command,

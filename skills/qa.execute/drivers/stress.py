@@ -1,7 +1,5 @@
 """Driver stress: ejecuta pruebas de carga con autocannon/hey/wrk."""
 
-import json
-import os
 import re
 import subprocess
 import time

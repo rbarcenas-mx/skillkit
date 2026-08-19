@@ -55,7 +55,7 @@ def spinner_while_waiting(stop_event, label="Processing"):
         i += 1
         time.sleep(0.15)
     elapsed = time.time() - t0
-    sys.stderr.write(f'\r  {"\u2705"} {label} — completed in {elapsed:.1f}s   \n')
+    sys.stderr.write(f'\r  {"✅"} {label} — completed in {elapsed:.1f}s   \n')
     sys.stderr.flush()
 
 

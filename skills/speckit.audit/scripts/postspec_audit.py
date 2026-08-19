@@ -17,7 +17,12 @@ Variables de entorno:
   AUDIT_GLOBAL_PROGRESS: "X/Y" (etapa actual de N totales)
 """
 
-import json, subprocess, sys, os, re, glob, shutil
+import json
+import subprocess
+import sys
+import os
+import re
+import glob
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
 from lib import resolve_model, build_payload
@@ -199,7 +204,7 @@ Reportes:
     batch_files_pattern = os.environ.get('AUDIT_BATCH_FILES', '')
     batches_raw = os.environ.get('AUDIT_BATCHES', '[]')
     has_batches = False
-    
+
     if batch_files_pattern:
         # Modo batch basado en archivos
         batch_files = sorted(glob.glob(os.path.join(context_dir, batch_files_pattern)))
@@ -216,7 +221,7 @@ Reportes:
             log(f" Modo batch por JSON: {len(batches)} lotes")
         except json.JSONDecodeError:
             log("WARN: AUDIT_BATCHES inválido, ignorando")
-    
+
     if has_batches:
         global_progress = os.environ.get('AUDIT_GLOBAL_PROGRESS', '')
         total = len(batches)
@@ -236,7 +241,7 @@ Responde con:
 Responde únicamente en español."""
 
         log(f"\n{'='*60}")
-        log(f" Auditoría de código por lotes")
+        log(" Auditoría de código por lotes")
         log(f" Total batches: {total}")
         log(f" Reanudación: {'SÍ' if resume else 'NO'}")
         log(f"{'='*60}\n")

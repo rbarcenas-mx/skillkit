@@ -38,7 +38,8 @@ C = {
 }
 
 def progress_bar(done, total, label=""):
-    if total <= 0: return
+    if total <= 0:
+        return
     pct = int((done / total) * 100)
     filled = int(30 * done / total)
     bar_filled = '\u2588' * filled
@@ -73,7 +74,7 @@ def spinner_while_waiting(stop_event, label="Processing"):
         i += 1
         time.sleep(0.15)
     elapsed = time.time() - t0
-    sys.stderr.write(f'\r  {"\u2705"} {label} — completed in {elapsed:.1f}s   \n')
+    sys.stderr.write(f'\r  {"✅"} {label} — completed in {elapsed:.1f}s   \n')
     sys.stderr.flush()
 
 

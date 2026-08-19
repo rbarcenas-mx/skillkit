@@ -111,8 +111,8 @@ def welcome():
     print(f"\n  {'='*56}")
     print(f"  {bold('SkillKit Setup')}")
     print(f"  {'='*56}")
-    print(f"\n  Structured engineering workflows for your AI agent.")
-    print(f"  CI, QA, audit, reviews, diagrams — with smart model selection.\n")
+    print("\n  Structured engineering workflows for your AI agent.")
+    print("  CI, QA, audit, reviews, diagrams — with smart model selection.\n")
 
 
 def detection_phase():
@@ -131,7 +131,7 @@ def detection_phase():
 
     if not catalog:
         print(f"\n    {red('Error:')} Cannot find {SKILLKIT_HOME}/lib/models.json")
-        print(f"    Run from your skillkit directory.")
+        print("    Run from your skillkit directory.")
         sys.exit(1)
 
     return agents, ollama_models, api_keys, catalog, shell_rc
@@ -143,8 +143,8 @@ def budget_phase(ollama_models, api_keys, catalog):
     has_local = len(ollama_models) > 0
     has_remote = len(api_keys) > 0
 
-    print(f"    SkillKit uses low/medium/high to pick the cheapest model")
-    print(f"    that can handle each task.")
+    print("    SkillKit uses low/medium/high to pick the cheapest model")
+    print("    that can handle each task.")
     print()
 
     if has_local and not has_remote:
@@ -203,7 +203,7 @@ def remote_phase(api_keys, catalog):
             key = getpass.getpass(f"    {info['env']}: ")
             if key:
                 config_updates[prov] = {"api_key": f"{{env:{info['env']}}}"}
-                if ask_yn(f"  Export in shell rc?", True):
+                if ask_yn("  Export in shell rc?", True):
                     env_exports.append(f"export {info['env']}=\"{key}\"")
     return config_updates, env_exports
 
@@ -283,7 +283,7 @@ def instructions_phase(agents):
                 print(f"  {bold(a)}: {tips[a]}")
     else:
         print(f"  {yellow('No agent detected.')} SkillKit works with any agent that")
-        print(f"  reads Markdown and runs bash. See README.md.")
+        print("  reads Markdown and runs bash. See README.md.")
     print(f"\n  {dim('Docs: README.md | CONTRIBUTING.md')}")
 
 

@@ -13,7 +13,7 @@ def decide(step_id: str, desc: str, error: str,
            error_type: str, status: int,
            retry_count: int, max_retries: int) -> str:
     """Decide que hacer ante un fallo usando reglas locales.
-    
+
     Solo consulta al modelo como fallback si el tipo de error es 'unknown'.
     """
     # Error transitorio: reintentar si no se agotaron los reintentos

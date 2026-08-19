@@ -27,6 +27,9 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
+# E501: long lines are intentional (LLM prompt strings).
+# E402: sys.path.insert before `from lib import` is a deliberate script pattern.
+ignore = ["E501", "E402"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
