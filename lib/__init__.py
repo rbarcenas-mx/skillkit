@@ -142,12 +142,17 @@ def call_model(model, system_prompt, user_msg, num_predict=2048,
 
     api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
     api_key = os.environ.get("SKILLKIT_API_KEY", "")
-    headers = ["-H", "Content-Type: application/json"]
-    if api_key:
-        headers += ["-H", f"Authorization: Bearer {api_key}"]
     url = api_url.rstrip('/')
     if not url.endswith('/chat/completions'):
         url += '/chat/completions'
+
+    # ponytail: keep the API key out of the process argv (visible via /proc).
+    # Write the headers to a curl --config file (-K) instead of -H on the cmdline.
+    headers_file = '/tmp/skillkit/skillkit_headers.conf'
+    with open(headers_file, 'w', encoding='utf-8') as f:
+        f.write('header = "Content-Type: application/json"\n')
+        if api_key:
+            f.write(f'header = "Authorization: Bearer {api_key}"\n')
 
     result = {
         "content": "",
@@ -161,7 +166,7 @@ def call_model(model, system_prompt, user_msg, num_predict=2048,
 
     try:
         r = subprocess.run(
-            ["curl", "-s", "-X", "POST", url, *headers, "-d", "@" + pfile],
+            ["curl", "-s", "-X", "POST", url, "-K", headers_file, "-d", "@" + pfile],
             capture_output=True, text=True, timeout=timeout,
         )
     except subprocess.TimeoutExpired:

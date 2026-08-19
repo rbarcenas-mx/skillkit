@@ -24,8 +24,10 @@ SkillKit provides 10 ready-to-use development skills (CI, QA, audit, reviews, di
 | `TOKEN_BUDGET` | Executor model range | Token cost | Use case |
 |---|---|---|---|
 | `low` | Ollama local (gemma4, deepseek-coder, deepseek-r1) | $0 | Daily development |
-| `medium` | Remote balanced (deepseek-v4-flash, kimi-k2.7) | $$ | Pre-push QA |
-| `high` | Remote premium (glm-5.2, qwen3.7-max) | $$$ | Critical reviews |
+| `medium` | Remote — reasoning (`deepseek-v4-flash`) or mechanical (`mimo-v2.5`) | $$ | Pre-push QA |
+| `high` | Remote premium — reasoning (`deepseek-v4-pro`, `glm-5.2`, `kimi-k2.7-code`) or mechanical (`mimo-v2.5-pro`) | $$$ | Critical reviews |
+
+The engine picks per-skill models based on **job type**: reasoning-heavy work (audit, review, spec/plan analysis) uses a reasoning model, while mechanical/classification tasks (diagrams, lint, CI/QA classification) use a cheap non-reasoning model (`mimo-v2.5`) to avoid paying for a reasoning-token burn on every call. See `lib/models.json` → `skill_mapping`.
 
 ## Architecture: Orchestrator + Executor
 
@@ -231,14 +233,14 @@ SkillKit V1.0 supports **OpenAI-compatible** providers only. Add the provider to
 
 The environment variable name is up to you — just match it in `{env:YOUR_NAME}`. Then assign the model ID to any skill in `skill_mapping`.
 
-**Note:** the stock `run.py` executors use the OpenAI chat-completions format (`/chat/completions`, `Authorization: Bearer`, `choices[0].message.content`). Providers that are not OpenAI-compatible need a custom driver in the skill or an OpenAI-compatible proxy.
+**Note:** the stock executors only call the OpenAI chat-completions endpoint (`/chat/completions`, `Authorization: Bearer`, `choices[0].message.content`). Providers or models that expose a different API shape — e.g. Anthropic-style `/messages` (qwen3.7-plus/max, minimax-*) or `/responses` (grok, gpt) — are **not usable** until a driver for that endpoint is added. Stick to OpenAI-compatible models for now.
 
-For non-OpenAI providers (e.g. Anthropic, Gemini), run a local OpenAI-compatible proxy such as [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) and point SkillKit at it.
+For non-OpenAI providers, run a local OpenAI-compatible proxy such as [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) and point SkillKit at it.
 
 ### Security notes
 
 - API keys are **never printed** by the engine or the skills.
-- Keys are passed to `curl` via a temporary config file (`-K /tmp/skillkit/skillkit_headers.conf`), never as command-line arguments, so they do not appear in `ps`.
+- Keys are passed to `curl` via a temporary config file (`-K /tmp/skillkit/skillkit_headers.conf`), never as command-line arguments, so they do not appear in `ps`/`/proc`.
 - If you store keys in `~/.config/skillkit/config.json`, restrict its permissions: `chmod 600 ~/.config/skillkit/config.json`.
 - The temporary header file is overwritten on each run but is not automatically deleted. On shared machines, consider adding `rm /tmp/skillkit/skillkit_headers.conf` after the skill finishes, or use an in-memory secret manager.
 
