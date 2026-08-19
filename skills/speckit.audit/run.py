@@ -29,7 +29,7 @@ sys.stderr.reconfigure(line_buffering=True)
 from datetime import datetime
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 NUM_PREDICT = {'spec': 2048, 'plan': 2048, 'tasks': 2048, 'codigo': 2048}
 
@@ -200,6 +200,86 @@ def extract_findings(report: str) -> tuple:
             len(re.findall(r'\*\*ID\*\*:\s*O\d+', report)))
 
 
+_JSON_INSTRUCCION = """Responde UNICAMENTE con un objeto JSON valido (sin texto antes ni despues del JSON), con esta estructura exacta:
+
+{
+  "veredicto": "APROBADO" | "APROBADO CON OBSERVACIONES" | "REQUIERE CAMBIOS",
+  "criticos": [{"id": "C1", "descripcion": "texto", "archivo": "ruta/relativa", "accion": "texto"}],
+  "advertencias": [{"id": "W1", "descripcion": "texto", "archivo": "ruta/relativa", "accion": "texto"}],
+  "observaciones": [{"id": "O1", "descripcion": "texto", "archivo": "ruta/relativa", "beneficio": "texto"}]
+}
+
+Reglas:
+- "criticos", "advertencias" y "observaciones" pueden ser arrays vacios.
+- "archivo" debe ser la ruta relativa exacta mostrada en === ARCHIVO (ruta) === (ej: `specs/feature/spec.md`). No inventes rutas.
+- Responde solo en espanol."""
+
+
+def _extract_json(text: str):
+    """Devuelve el objeto JSON embebido en el texto, o None si no es JSON valido."""
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        pass
+    start = text.find('{')
+    end = text.rfind('}')
+    if start != -1 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except (json.JSONDecodeError, ValueError):
+            return None
+    return None
+
+
+def parse_audit_response(text: str) -> dict:
+    """Parsea la respuesta del modelo (JSON) y normaliza a veredicto + reporte markdown.
+
+    El modelo devuelve JSON compacto; aqui se extrae veredicto y hallazgos, y se
+    renderiza el reporte al formato markdown que audit-resolve parsea con regex.
+    Si el modelo no devuelve JSON valido, cae al parseo legacy por regex.
+    """
+    if not text or text.startswith('ERROR'):
+        return {'veredicto': 'DESCONOCIDO', 'report': text or '',
+                'criticals': 0, 'warnings': 0, 'observations': 0}
+
+    data = _extract_json(text)
+    if data is None:
+        c, w, o = extract_findings(text)
+        return {'veredicto': extract_verdict(text), 'report': text,
+                'criticals': c, 'warnings': w, 'observations': o}
+
+    criticos = data.get('criticos') or []
+    advertencias = data.get('advertencias') or []
+    observaciones = data.get('observaciones') or []
+    veredicto = extract_verdict(str(data.get('veredicto') or ''))
+
+    lines = []
+    if criticos:
+        lines.append('## Hallazgos Criticos')
+        for f in criticos:
+            lines.append(f"**ID**: {f.get('id', 'C?')}, **Descripcion**: {f.get('descripcion', '')}, "
+                         f"**Archivo:linea**: `{f.get('archivo', '')}`, **Accion requerida**: {f.get('accion', '')}")
+    if advertencias:
+        lines.append('## Advertencias')
+        for f in advertencias:
+            lines.append(f"**ID**: {f.get('id', 'W?')}, **Descripcion**: {f.get('descripcion', '')}, "
+                         f"**Archivo:linea**: `{f.get('archivo', '')}`, **Accion sugerida**: {f.get('accion', '')}")
+    if observaciones:
+        lines.append('## Observaciones')
+        for f in observaciones:
+            lines.append(f"**ID**: {f.get('id', 'O?')}, **Descripcion**: {f.get('descripcion', '')}, "
+                         f"**Archivo:linea**: `{f.get('archivo', '')}`, **Beneficio**: {f.get('beneficio', f.get('accion', ''))}")
+    lines.append(f'## Veredicto\n{veredicto}')
+
+    return {
+        'veredicto': veredicto,
+        'report': '\n'.join(lines),
+        'criticals': len(criticos),
+        'warnings': len(advertencias),
+        'observations': len(observaciones),
+    }
+
+
 # =============================================================================
 # OLLAMA
 # =============================================================================
@@ -209,14 +289,8 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
                label: str = "Auditando") -> str:
     # Usar SKILLKIT_MODEL si esta disponible
     api_model = os.environ.get("SKILLKIT_MODEL", model)
-    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
     prompt_chars = len(user_msg) + len(system_prompt)
     log(f"  ▶ Payload: {prompt_chars:,} chars, modelo={api_model}")
-
-    pfile = '/tmp/skillkit/payload_audit.json'
-    os.makedirs('/tmp/skillkit', exist_ok=True)
-    with open(pfile, 'w') as f:
-        json.dump(payload, f, ensure_ascii=False)
 
     stop_spinner = threading.Event()
     spinner_thread = threading.Thread(
@@ -225,43 +299,26 @@ def run_ollama(system_prompt: str, user_msg: str, model: str,
     )
     spinner_thread.start()
     try:
-        api_url = get_api_url()
-        api_key = get_api_key()
-        headers = ["-H", "Content-Type: application/json"]
-        if api_key:
-            headers += ["-H", f"Authorization: Bearer {api_key}"]
-        url = api_url.rstrip('/')
-        if not url.endswith('/chat/completions'):
-            url += '/chat/completions'
-        r = subprocess.run(
-            ["curl", "-s", "-X", "POST", url,
-             *headers, "-d", "@" + pfile],
-            capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        stop_spinner.set()
-        spinner_thread.join()
-        return "ERROR: timeout"
-    except Exception as e:
-        stop_spinner.set()
-        spinner_thread.join()
-        return f"ERROR: {e}"
+        result = call_model(
+            api_model, system_prompt, user_msg,
+            num_predict=num_predict, response_format="json", timeout=timeout,
+        )
     finally:
         stop_spinner.set()
         spinner_thread.join()
 
-    if r.returncode != 0:
-        log(f"  ❌ curl error: {r.stderr[:200]}")
-        return f"ERROR curl: {r.stderr}"
-    if not r.stdout.strip():
-        log("  ❌ Respuesta vacia del modelo")
+    if result["truncated"]:
+        log(f"  ❌ Respuesta truncada (finish_reason=length). Reintenta con max_tokens mayor.")
+        return "ERROR: respuesta truncada (finish_reason=length)"
+    if result["error"]:
+        log(f"  ❌ Model error: {result['content'][:200]}")
+        return result["content"]
+    if result["empty"]:
+        log("  ❌ Respuesta vacia (content vacio)")
         return "ERROR: respuesta vacia"
 
-    resp = json.loads(r.stdout)
-    choices = resp.get("choices", [])
-    content = choices[0]["message"]["content"] if choices else resp.get("message", {}).get("content", "")
-    result_text = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-    log(f"  ▶ Respuesta: {len(result_text):,} chars")
-    return result_text
+    log(f"  ▶ Respuesta: {len(result['content']):,} chars")
+    return result["content"]
 
 
 # =============================================================================
@@ -272,121 +329,31 @@ SYS_SPEC = """Eres un auditor senior de producto. Revisa la especificacion.
 
 IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/spec.md`). No inventes rutas de archivos.
 
-Responde EXACTAMENTE:
-# Reporte de Auditoria — Especificacion
-
-## Resumen Ejecutivo
-
-## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
-
-## Advertencias
-**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
-
-## Observaciones
-**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
-
-## Veredicto
-APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
-
-## Decisiones Pendientes
-
-Responde solo en espanol."""
+""" + _JSON_INSTRUCCION
 
 SYS_PLAN = """Eres un auditor senior de arquitectura. Revisa el plan tecnico.
 
 IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/plan.md`). No inventes rutas de archivos.
 
-Responde EXACTAMENTE:
-# Reporte de Auditoria — Plan Tecnico
-
-## Resumen Ejecutivo
-
-## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
-
-## Advertencias
-**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
-
-## Observaciones
-**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
-
-## Veredicto
-APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
-
-## Decisiones Pendientes
-Responde solo en espanol."""
+""" + _JSON_INSTRUCCION
 
 SYS_TASKS = """Eres un auditor senior de ingenieria. Revisa las tareas.
 
 IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. Cada hallazgo DEBE citar el archivo afectado entre backticks usando la ruta relativa mostrada en los separadores === ARCHIVO (ruta) === (ej: `specs/feature/tasks.md`). No inventes rutas de archivos.
 
-Responde EXACTAMENTE:
-# Reporte de Auditoria — Tareas
-
-## Resumen Ejecutivo
-
-## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion requerida**: ...
-
-## Advertencias
-**ID**: W1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Accion sugerida**: ...
-
-## Observaciones
-**ID**: O1, **Descripcion**: ..., **Archivo:linea**: `ruta/archivo.md`, **Beneficio**: ...
-
-## Veredicto
-APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
-
-## Decisiones Pendientes
-Responde solo en espanol."""
+""" + _JSON_INSTRUCCION
 
 SYS_LINT = """Eres un auditor senior de calidad de codigo. Revisa la salida de herramientas de linting (ESLint, tsc --noEmit, Prettier) y clasifica los hallazgos.
 
 IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
 
-Responde EXACTAMENTE:
-# Reporte de Auditoria — Lint/TypeCheck
-
-## Resumen Ejecutivo
-
-## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Archivo:linea**: ..., **Accion requerida**: ...
-
-## Advertencias
-**ID**: W1, **Descripcion**: ..., **Accion sugerida**: ...
-
-## Observaciones
-
-## Veredicto
-APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
-
-Responde solo en espanol."""
+""" + _JSON_INSTRUCCION
 
 SYS_CODIGO = """Eres un auditor senior de ingenieria. Verifica que el codigo sea coherente con la especificacion, plan y tareas.
 
 IMPORTANTE: Solo puedes referenciar archivos que hayan sido proporcionados explicitamente en el contexto de esta auditoria. No inventes rutas de archivos.
 
-Responde EXACTAMENTE:
-# Reporte de Auditoria — Codigo
-
-## Resumen Ejecutivo
-
-## Hallazgos Criticos
-**ID**: C1, **Descripcion**: ..., **Archivo:linea**: ..., **Accion requerida**: ...
-
-## Advertencias
-
-## Observaciones
-
-## Veredicto
-APROBADO | APROBADO CON OBSERVACIONES | REQUIERE CAMBIOS
-
-## Cobertura de Requisitos
-Tabla FR -> estado.
-
-## Decisiones Pendientes
-Responde solo en espanol."""
+""" + _JSON_INSTRUCCION
 
 SYSTEM_PROMPTS = {
     'spec': SYS_SPEC, 'plan': SYS_PLAN, 'tasks': SYS_TASKS, 'codigo': SYS_CODIGO,
@@ -497,9 +464,9 @@ def audit_stage_full(workdir: str, feature: str, stage: str, model: str) -> dict
     log(f"  ▶ Contexto total: {len(context):,} chars — enviando a auditar...")
     report = run_ollama(SYSTEM_PROMPTS[stage], f"## Artefactos\n\n{context}",
                         model, NUM_PREDICT.get(stage, 2048), label=stage)
-    v = extract_verdict(report)
-    c, w, o = extract_findings(report)
-    return {'veredicto': v, 'report': report, 'criticals': c, 'warnings': w, 'observations': o,
+    parsed = parse_audit_response(report)
+    return {'veredicto': parsed['veredicto'], 'report': parsed['report'],
+            'criticals': parsed['criticals'], 'warnings': parsed['warnings'], 'observations': parsed['observations'],
             'model': model, 'num_predict': NUM_PREDICT.get(stage, 2048)}
 
 
@@ -531,12 +498,11 @@ def audit_codigo_batch(workdir: str, feature: str, batch_idx: int, model: str,
     user_msg = f"Capa: {batch_info['layer']}\nBatch: {batch_idx + 1}/{manifest['total_batches']}\n\n{code_content}"
     report = run_ollama(system, user_msg, model, NUM_PREDICT.get('codigo', 1024),
                         label=f"codigo/{batch_info['layer']}")
-    v = extract_verdict(report)
-    c, w, o = extract_findings(report)
+    parsed = parse_audit_response(report)
 
     return {
-        'veredicto': v, 'report': report,
-        'criticals': c, 'warnings': w, 'observations': o,
+        'veredicto': parsed['veredicto'], 'report': parsed['report'],
+        'criticals': parsed['criticals'], 'warnings': parsed['warnings'], 'observations': parsed['observations'],
         'model': model, 'num_predict': NUM_PREDICT.get('codigo', 3072),
         'batch': {
             'layer': batch_info['layer'],
@@ -585,12 +551,11 @@ def audit_lint(workdir: str, feature: str, model: str) -> dict:
     )
 
     report = run_ollama(SYS_LINT, context, model, 2048, label="lint")
-    v = extract_verdict(report)
-    c, w, o = extract_findings(report)
+    parsed = parse_audit_response(report)
 
     return {
-        'veredicto': v, 'report': report,
-        'criticals': c, 'warnings': w, 'observations': o,
+        'veredicto': parsed['veredicto'], 'report': parsed['report'],
+        'criticals': parsed['criticals'], 'warnings': parsed['warnings'], 'observations': parsed['observations'],
         'model': model, 'num_predict': 2048,
     }
 

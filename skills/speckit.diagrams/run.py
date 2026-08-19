@@ -17,7 +17,6 @@ Output:
 import json
 import os
 import re
-import subprocess
 import sys
 
 sys.stderr.reconfigure(line_buffering=True)
@@ -25,7 +24,7 @@ import threading
 import time
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 DEFAULT_MODEL = resolve_model("diagrams")
 API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
@@ -63,48 +62,16 @@ def spinner_while_waiting(stop_event, label="Processing"):
 def run_ollama(system_prompt: str, user_msg: str, model: str,
                num_predict: int = 4096) -> tuple:
     api_model = os.environ.get("SKILLKIT_MODEL", model)
-    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
-    payload_path = "/tmp/skillkit/diagrams_payload.json"
-    os.makedirs("/tmp/skillkit", exist_ok=True)
-    with open(payload_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
-
-    try:
-        headers = ["-H", "Content-Type: application/json"]
-        if API_KEY:
-            headers += ["-H", f"Authorization: Bearer {API_KEY}"]
-        result = subprocess.run(
-            ["curl", "-s", "-X", "POST", API_URL,
-             *headers, "-d", "@" + payload_path],
-            capture_output=True, text=True, timeout=TIMEOUT,
-        )
-        if result.returncode != 0:
-            return None, f"ERROR curl: {result.stderr}"
-        if not result.stdout.strip():
-            return None, "ERROR: empty response from model"
-        resp = json.loads(result.stdout)
-        choices = resp.get("choices", [])
-        content = choices[0]["message"]["content"] if choices else resp.get("message", {}).get("content", "")
-        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
-        usage = resp.get("usage", {})
-        return content.strip(), usage
-    except Exception as e:
-        return None, f"ERROR: {e}"
+    result = call_model(
+        api_model, system_prompt, user_msg,
+        num_predict=num_predict, response_format="json", timeout=TIMEOUT,
+    )
+    if result["error"]:
+        return None, result["content"]
+    return result["content"], result["usage"]
 
 
 def extract_json(text: str) -> dict:
-    m = re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
-    m = re.search(r"```\s*\n(.*?)\n```", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
     try:
         return json.loads(text)
     except json.JSONDecodeError:

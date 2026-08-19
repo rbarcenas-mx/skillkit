@@ -37,7 +37,7 @@ def progress_bar(done, total, label=""):
 sys.stderr.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model
+from lib import resolve_model, call_model
 
 WORKDIR = os.environ.get('WORKDIR', '.')
 QA_PROJECT_CONTEXT = os.environ.get('QA_PROJECT_CONTEXT', '{}')
@@ -113,56 +113,16 @@ def call_model(system_prompt, user_message):
     if not model:
         resolve_model("qa.prepare")
         model = os.environ.get("SKILLKIT_MODEL", "")
-    provider = os.environ.get("SKILLKIT_PROVIDER", "ollama")
-    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
 
-    if not api_url.endswith("/chat/completions"):
-        api_url = api_url.rstrip("/") + "/chat/completions"
+    result = call_model(
+        model, system_prompt, user_message,
+        num_predict=16384, temperature=0.1, timeout=600,
+    )
 
-    payload = {
-        "model": model,
-        "stream": False,
-        "max_tokens": 16384,
-        "temperature": 0.1,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-    }
-    payload_path = '/tmp/skillkit/qa_prepare_payload.json'
-    with open(payload_path, 'w', encoding='utf-8') as f:
-        json.dump(payload, f, ensure_ascii=False)
-
-    curl_cmd = [
-        "curl", "-s", "-X", "POST", api_url,
-        "-H", "Content-Type: application/json",
-    ]
-    if provider != "ollama":
-        api_key = get_api_key()
-        if api_key:
-            curl_cmd += ["-H", f"Authorization: Bearer {api_key}"]
-    curl_cmd += ["-d", "@" + payload_path]
-
-    result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=600)
-
-    if result.returncode != 0:
-        print(f"ERROR calling model: {result.stderr}", file=sys.stderr)
-        return ''
-
-    try:
-        response = json.loads(result.stdout)
-        if "error" in response:
-            print(f"ERROR API: {json.dumps(response['error'], ensure_ascii=False)[:200]}", file=sys.stderr)
-            return ''
-        msg = response.get("choices", [{}])[0].get("message", {})
-        content = msg.get("content", "")
-        reasoning = msg.get("reasoning_content", "")
-        if not content and reasoning:
-            print("  Model produced reasoning only, no final response", file=sys.stderr)
-            content = reasoning
-    except (json.JSONDecodeError, KeyError, IndexError) as e:
-        print(f"ERROR parsing response: {e}", file=sys.stderr)
-        return ''
+    content = result["content"]
+    if not content and result["reasoning"]:
+        print("  Model produced reasoning only, no final response", file=sys.stderr)
+        content = result["reasoning"]
 
     content = re.sub(r'ILD.*?XXX', '', content, flags=re.DOTALL)
     return content.strip()

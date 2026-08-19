@@ -21,7 +21,6 @@ Output: JSON on stdout + writes/updates idea.md
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -29,7 +28,7 @@ import time
 sys.stderr.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 MODEL = resolve_model("prespec")
 API_URL = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
@@ -75,13 +74,7 @@ spinner_start = 0.0
 
 def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> str:
     global spinner_start
-    payload = build_payload(
-        os.environ.get("SKILLKIT_MODEL", MODEL), system_prompt, user_msg,
-        num_predict=num_predict, stream=False)
-    payload_path = "/tmp/skillkit/prespec_payload.json"
-    os.makedirs("/tmp/skillkit", exist_ok=True)
-    with open(payload_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
+    api_model = os.environ.get("SKILLKIT_MODEL", MODEL)
 
     spinner_start = time.time()
     stop = threading.Event()
@@ -89,34 +82,15 @@ def run_ollama(system_prompt: str, user_msg: str, num_predict: int = 4096) -> st
     t.start()
 
     try:
-        headers = ["-H", "Content-Type: application/json"]
-        if API_KEY:
-            headers += ["-H", f"Authorization: Bearer {API_KEY}"]
-        result = subprocess.run(
-            ["curl", "-s", "-X", "POST", API_URL,
-             *headers, "-d", "@" + payload_path],
-            capture_output=True, text=True, timeout=TIMEOUT,
+        result = call_model(
+            api_model, system_prompt, user_msg,
+            num_predict=num_predict, timeout=TIMEOUT,
         )
+    finally:
         stop.set()
         t.join()
 
-        if result.returncode != 0:
-            return f"ERROR curl: {result.stderr}"
-        if not result.stdout.strip():
-            return "ERROR: empty response from model"
-        resp = json.loads(result.stdout)
-        choices = resp.get("choices", [])
-        content = choices[0]["message"]["content"] if choices else resp.get("message", {}).get("content", "")
-        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
-        return content.strip()
-    except subprocess.TimeoutExpired:
-        stop.set()
-        t.join()
-        return "ERROR: timeout — model took too long to respond"
-    except Exception as e:
-        stop.set()
-        t.join()
-        return f"ERROR: {e}"
+    return result["content"]
 
 
 INITIAL_PROMPT = """Eres un analista senior de producto y arquitecto de software con experiencia en startups y productos técnicos. Tu tarea es analizar una idea de desarrollo en bruto y producir un documento de pre-especificacion riguroso.

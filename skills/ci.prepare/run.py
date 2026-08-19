@@ -12,7 +12,6 @@ Output: JSON on stdout with classification + commit_strategy
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -20,7 +19,7 @@ import time
 sys.stderr.reconfigure(line_buffering=True)
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 TIMEOUT = 600
 PROGRESS_FILE = "/tmp/skillkit/ci_prepare_progress.json"
@@ -62,61 +61,14 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
     resolve_model(skill_name)
     api_model = os.environ.get("SKILLKIT_MODEL", "")
 
-    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
-    pfile = '/tmp/skillkit/ci_prepare_payload.json'
-    os.makedirs('/tmp/skillkit', exist_ok=True)
-    with open(pfile, 'w') as f:
-        json.dump(payload, f, ensure_ascii=False)
-
-    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
-    api_key = os.environ.get("SKILLKIT_API_KEY", "")
-    headers = ["-H", "Content-Type: application/json"]
-    if api_key:
-        headers += ["-H", f"Authorization: Bearer {api_key}"]
-    url = api_url.rstrip('/')
-    if not url.endswith('/chat/completions'):
-        url += '/chat/completions'
-
-    try:
-        r = subprocess.run(
-            ["curl", "-s", "-X", "POST", url,
-             *headers, "-d", "@" + pfile],
-            capture_output=True, text=True, timeout=TIMEOUT)
-        if r.returncode != 0:
-            return f"ERROR curl: {r.stderr}", {}
-        if not r.stdout.strip():
-            return "ERROR: empty response", {}
-
-        resp = json.loads(r.stdout)
-        if "error" in resp:
-            return f"ERROR API: {resp['error']}", {}
-
-        usage = resp.get("usage", {})
-        choices = resp.get("choices", [])
-        if choices:
-            content = choices[0]["message"]["content"]
-        else:
-            content = resp.get("message", {}).get("content", "")
-        return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip(), usage
-    except subprocess.TimeoutExpired:
-        return "ERROR: timeout", {}
-    except Exception as e:
-        return f"ERROR: {e}", {}
+    result = call_model(
+        api_model, system_prompt, user_msg,
+        num_predict=num_predict, response_format="json", timeout=TIMEOUT,
+    )
+    return result["content"], result["usage"]
 
 
 def extract_json_from_response(text: str) -> dict:
-    m = re.search(r"```json\s*\n(.*?)\n```", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
-    m = re.search(r"```\s*\n(.*?)\n```", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
     try:
         return json.loads(text)
     except json.JSONDecodeError:

@@ -18,7 +18,6 @@ Output: JSON en stdout.
 import json
 import os
 import re
-import subprocess
 import sys
 import threading
 import time
@@ -27,7 +26,7 @@ sys.stderr.reconfigure(line_buffering=True)
 from datetime import datetime
 
 sys.path.insert(0, os.environ["SKILLKIT_HOME"])
-from lib import resolve_model, build_payload
+from lib import resolve_model, call_model
 
 LOG_BUF = []
 
@@ -130,47 +129,12 @@ def run_model(system_prompt: str, user_msg: str, skill_name: str,
     resolve_model(skill_name)
     api_model = os.environ.get("SKILLKIT_MODEL", "")
 
-    payload = build_payload(api_model, system_prompt, user_msg, num_predict=num_predict, stream=False)
-    pfile = '/tmp/skillkit/audit_resolve_payload.json'
-    os.makedirs('/tmp/skillkit', exist_ok=True)
-    with open(pfile, 'w') as f:
-        json.dump(payload, f, ensure_ascii=False)
-
-    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
-    api_key = os.environ.get("SKILLKIT_API_KEY", "")
-    headers = ["-H", "Content-Type: application/json"]
-    if api_key:
-        headers += ["-H", f"Authorization: Bearer {api_key}"]
-    url = api_url.rstrip('/')
-    if not url.endswith('/chat/completions'):
-        url += '/chat/completions'
-
-    try:
-        r = subprocess.run(
-            ["curl", "-s", "-X", "POST", url,
-             *headers, "-d", "@" + pfile],
-            capture_output=True, text=True, timeout=timeout)
-        # Guardar respuesta cruda para debug
-        rfile = '/tmp/skillkit/audit_resolve_raw_response.json'
-        with open(rfile, 'w') as f:
-            json.dump({"status": "debug", "response": r.stdout[:2000]}, f, ensure_ascii=False)
-
-        if r.returncode != 0:
-            return f"ERROR curl: {r.stderr}"
-        if not r.stdout.strip():
-            return "ERROR: respuesta vacia"
-
-        resp = json.loads(r.stdout)
-        if "error" in resp:
-            return f"ERROR API: {resp['error']}"
-        choices = resp.get("choices", [])
-        content = (choices[0]["message"]["content"] if choices
-                   else resp.get("message", {}).get("content", ""))
-        return re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-    except subprocess.TimeoutExpired:
-        return "ERROR: timeout"
-    except Exception as e:
-        return f"ERROR: {e}"
+    result = call_model(
+        api_model, system_prompt, user_msg,
+        num_predict=num_predict, timeout=timeout,
+        raw_response_path='/tmp/skillkit/audit_resolve_raw_response.json',
+    )
+    return result["content"]
 
 
 # =============================================================================
