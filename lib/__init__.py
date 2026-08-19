@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -69,17 +70,25 @@ def _set_api_env(provider_cfg):
 
 _REASONING_MODELS = ("deepseek", "kimi", "glm", "qwen")
 
+# ponytail: reasoning models spend most of their output budget on the
+# reasoning field before emitting content, and the gateway ignores every
+# "disable thinking" param (reasoning_effort, enable_thinking, thinking), so
+# they need a large max_tokens to finish reasoning AND answer. Reasoning length
+# is non-deterministic (measured 52k-70k chars on a 44k-char audit prompt), so
+# we cap generously: audits are rare but must complete. Non-reasoning models
+# keep the caller's cap.
+_REASONING_MAX_TOKENS = 65536
 
-def build_payload(model, system_prompt, user_msg, num_predict=2048, stream=False):
+
+def build_payload(model, system_prompt, user_msg, num_predict=2048, stream=False, response_format=None):
     """Build a chat payload for Ollama (options.num_predict) or OpenAI-style
     gateways (max_tokens).
 
     The remote gateway rejects Ollama's `options` field with HTTP 400, so it is
-    only sent when the provider is local ollama. Models with visible reasoning
-    (deepseek-*, kimi-*, glm-*, qwen-*) otherwise burn their whole output budget
-    on reasoning_content and return an empty content, so they get
-    `reasoning_effort: "none"` to force a direct final answer. mimo-* rejects
-    that field, so it is not sent for it.
+    only sent when the provider is local ollama. Reasoning models
+    (deepseek-*, kimi-*, glm-*, qwen-*) get a larger max_tokens budget because
+    they emit the reasoning field before content. When `response_format="json"`
+    the caller gets a compact machine-parseable answer instead of prose.
     """
     payload = {
         "model": model,
@@ -91,11 +100,132 @@ def build_payload(model, system_prompt, user_msg, num_predict=2048, stream=False
     }
     if os.environ.get("SKILLKIT_PROVIDER") == "ollama":
         payload["options"] = {"num_predict": num_predict}
+        if response_format == "json":
+            payload["format"] = "json"
     else:
-        payload["max_tokens"] = num_predict
-        if any(t in str(model).lower() for t in _REASONING_MODELS):
-            payload["reasoning_effort"] = "none"
+        is_reasoning = any(t in str(model).lower() for t in _REASONING_MODELS)
+        payload["max_tokens"] = _REASONING_MAX_TOKENS if is_reasoning else num_predict
+        if response_format == "json":
+            payload["response_format"] = {"type": "json_object"}
     return payload
+
+
+def call_model(model, system_prompt, user_msg, num_predict=2048,
+               response_format=None, timeout=600, temperature=None,
+               raw_response_path=None) -> dict:
+    """Centralized model call with truncation/empty-content detection.
+
+    Returns a dict with:
+      - content: stripped model content (or "ERROR: ..." on failure)
+      - reasoning: reasoning content if present, else ""
+      - usage: token usage dict (empty on failure)
+      - finish_reason: finish reason string or None
+      - truncated: True when finish_reason == "length"
+      - empty: True when content is blank after stripping
+      - error: None on success, short code/description on failure
+
+    This is the single place where truncation and empty-content detection live.
+    Callers should check `error` or `truncated`/`empty` flags.
+    """
+    payload = build_payload(
+        model, system_prompt, user_msg,
+        num_predict=num_predict, stream=False,
+        response_format=response_format,
+    )
+    if temperature is not None:
+        payload["temperature"] = temperature
+
+    pfile = '/tmp/skillkit/payload.json'
+    os.makedirs('/tmp/skillkit', exist_ok=True)
+    with open(pfile, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False)
+
+    api_url = os.environ.get("SKILLKIT_API_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("SKILLKIT_API_KEY", "")
+    headers = ["-H", "Content-Type: application/json"]
+    if api_key:
+        headers += ["-H", f"Authorization: Bearer {api_key}"]
+    url = api_url.rstrip('/')
+    if not url.endswith('/chat/completions'):
+        url += '/chat/completions'
+
+    result = {
+        "content": "",
+        "reasoning": "",
+        "usage": {},
+        "finish_reason": None,
+        "truncated": False,
+        "empty": False,
+        "error": None,
+    }
+
+    try:
+        r = subprocess.run(
+            ["curl", "-s", "-X", "POST", url, *headers, "-d", "@" + pfile],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        result.update(content="ERROR: timeout", error="timeout")
+        return result
+    except Exception as e:
+        result.update(content=f"ERROR: {e}", error=str(e))
+        return result
+
+    if r.returncode != 0:
+        result.update(content=f"ERROR curl: {r.stderr}", error="curl_error")
+        return result
+    if not r.stdout.strip():
+        result.update(content="ERROR: empty response", error="empty_response")
+        return result
+
+    if raw_response_path:
+        os.makedirs(os.path.dirname(raw_response_path), exist_ok=True)
+        with open(raw_response_path, 'w', encoding='utf-8') as f:
+            json.dump({"status": "debug", "response": r.stdout}, f, ensure_ascii=False)
+
+    try:
+        resp = json.loads(r.stdout)
+    except (json.JSONDecodeError, ValueError) as e:
+        result.update(content=f"ERROR: invalid JSON response ({e})", error="json_error")
+        return result
+
+    if isinstance(resp, dict) and "error" in resp:
+        err = resp["error"]
+        err_str = json.dumps(err, ensure_ascii=False) if isinstance(err, (dict, list)) else str(err)
+        result.update(content=f"ERROR API: {err_str}", error="api_error")
+        return result
+
+    choices = resp.get("choices", []) if isinstance(resp, dict) else []
+    if choices:
+        message = choices[0].get("message", {})
+        finish_reason = choices[0].get("finish_reason")
+    else:
+        message = resp.get("message", {}) if isinstance(resp, dict) else {}
+        finish_reason = None
+
+    content = message.get("content", "") or ""
+    reasoning = message.get("reasoning_content") or message.get("reasoning") or ""
+    usage = resp.get("usage", {}) if isinstance(resp, dict) else {}
+
+    content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+    reasoning = re.sub(r'<think>.*?</think>', '', reasoning, flags=re.DOTALL).strip()
+
+    if finish_reason == "length":
+        reasoning_len = len(reasoning)
+        print(f"WARNING: response truncated (finish_reason=length, reasoning={reasoning_len:,} chars)", file=sys.stderr)
+        result.update(truncated=True)
+
+    if not content:
+        print("WARNING: response empty (content blank after stripping)", file=sys.stderr)
+        result.update(empty=True)
+
+    result.update(
+        content=content,
+        reasoning=reasoning,
+        usage=usage,
+        finish_reason=finish_reason,
+    )
+    return result
 
 
 def _ollama_models_available():
@@ -140,11 +270,6 @@ def _activate_model(model_id, info, budget_real, catalog, user_config):
     os.environ["SKILLKIT_PROVIDER"] = provider
 
     _set_api_env(provider_cfg)
-
-    headroom_url = os.environ.get("HEADROOM_PROXY_URL", "")
-    if headroom_url and provider and provider != "ollama":
-        os.environ["HEADROOM_UPSTREAM_URL"] = os.environ.get("SKILLKIT_API_URL", "")
-        os.environ["SKILLKIT_API_URL"] = headroom_url
 
     return model_id
 
